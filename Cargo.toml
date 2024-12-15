@@ -4,3 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+askama = "0.12.1"
+axum = "0.7.9"
+diesel = "2.2.6"
+tokio = { version = "1.42.0", features = [ "rt-multi-thread" ] }
