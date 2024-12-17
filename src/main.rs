@@ -1,3 +1,6 @@
+mod note;
+mod tag;
+
 use askama::Template;
 use axum::{routing::get, Router};
 use tokio; // bring trait in scope
@@ -13,12 +16,14 @@ struct HelloTemplate<'a> {
 
 #[tokio::main]
 async fn main() {
-
     // build our application with a single route
-    let app = Router::new().route("/", get(|| async {
-        let hello = HelloTemplate { name: "bergey" }; // instantiate your struct
-        hello.render().unwrap()
-    }));
+    let app = Router::new().route(
+        "/",
+        get(|| async {
+            let hello = HelloTemplate { name: "bergey" }; // instantiate your struct
+            hello.render().unwrap()
+        }),
+    );
 
     // run our app with hyper, listening globally on port 8000
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await.unwrap();
