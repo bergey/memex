@@ -15,7 +15,7 @@ struct ZTag {
     pub tag: String,
 }
 
-#[derive(Eq, Hash, PartialEq)]
+#[derive(Eq, Hash, PartialEq, Debug)]
 enum DocId {
     Zotero(i64),
     Calibre(i64),
@@ -99,6 +99,16 @@ async fn main() -> anyhow::Result<()> {
         tag_count += doc.tags.len();
     }
     println!("{} tag-title associations", tag_count);
+
+    let rust_tag_id = all_tags.insert("rust".to_string());
+    let tagged = Query::Tag(rust_tag_id);
+    let only = Query::Only(HashSet::from([rust_tag_id]));
+    let query = Query::And(&tagged, &only);
+    for (id, doc) in docs.iter() {
+        if match_tags(&query, &doc.tags) {
+            println!("{:?} {}", id, doc.title);
+        }
+    }
 
     Ok(())
 }
