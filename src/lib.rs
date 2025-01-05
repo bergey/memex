@@ -1,4 +1,4 @@
-pub mod note;
+// pub mod note;
 pub mod tag;
 
 use std::collections::HashSet;

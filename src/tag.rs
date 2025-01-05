@@ -1,14 +1,48 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy, Hash)]
-pub struct TagId(pub u16);
-
-pub struct Tag {
-    pub id: TagId,
-    pub name: String,
-}
+pub struct TagId(pub usize);
 
 pub type Tags = HashSet<TagId>;
+
+pub struct AllTags {
+    names: Vec<String>,
+    ids: HashMap<String, TagId>
+}
+
+impl AllTags {
+    pub fn new() -> Self {
+        AllTags {
+            names: Vec::new(),
+            ids: HashMap::new(),
+        }
+    }
+
+    pub fn name(&self, id: TagId) -> Option<String> {
+        self.names.get(id.0).cloned()
+    }
+
+    pub fn id(&self, name: &str) -> Option<TagId> {
+        self.ids.get(name).copied()
+    }
+
+    // returns a new TagId or the ID of an existing tag
+    pub fn insert(&mut self, name: String) -> TagId {
+        match self.id(&name) {
+            Some(id) => id,
+            None => {
+                let id = TagId(self.names.len());
+                self.names.push(name.clone());
+                self.ids.insert(name, id);
+                id
+            }
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.names.len()
+    }
+}
 
 pub enum Query<'a> {
     Only(Tags),
