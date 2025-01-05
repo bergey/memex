@@ -1,3 +1,6 @@
+pub mod query;
+use query::Query;
+
 use std::collections::{HashMap, HashSet};
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy, Hash)]
@@ -44,14 +47,7 @@ impl AllTags {
     }
 }
 
-pub enum Query<'a> {
-    Only(Tags),
-    Tag(TagId),
-    And(&'a Query<'a>, &'a Query<'a>),
-    Or(&'a Query<'a>, &'a Query<'a>),
-}
-
-pub fn match_tags(query: &Query, item_tags: &Tags) -> bool {
+pub fn match_tags(query: &Query<TagId>, item_tags: &Tags) -> bool {
     match query {
         Query::Tag(t) => item_tags.contains(t),
         Query::And(l, r) => match_tags(l, item_tags) && match_tags(r, item_tags),

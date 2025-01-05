@@ -13,3 +13,4 @@ futures-util = "0.3.31"
 sqlx = { version = "0.8.3", features = ["runtime-tokio", "sqlite"] }
 # sqlx-sqlite = "0.8.3"
 tokio = { version = "1.42.0", features = [ "rt-multi-thread" ] }
+winnow = "0.6.22"

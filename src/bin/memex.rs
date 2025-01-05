@@ -7,6 +7,7 @@ use sqlx::sqlite::SqlitePool;
 use std::collections::{HashMap, HashSet};
 
 use memex::tag::*;
+use memex::tag::query::*;
 
 #[derive(sqlx::FromRow, Debug)]
 struct ZTag {
@@ -103,7 +104,7 @@ async fn main() -> anyhow::Result<()> {
     let rust_tag_id = all_tags.insert("rust".to_string());
     let tagged = Query::Tag(rust_tag_id);
     let only = Query::Only(HashSet::from([rust_tag_id]));
-    let query = Query::And(&tagged, &only);
+    let query = Query::And(Box::new(tagged), Box::new(only));
     for (id, doc) in docs.iter() {
         if match_tags(&query, &doc.tags) {
             println!("{:?} {}", id, doc.title);
