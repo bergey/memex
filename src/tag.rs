@@ -1,4 +1,6 @@
-#[derive(PartialEq, Debug, Clone, Copy)]
+use std::collections::HashSet;
+
+#[derive(PartialEq, Eq, Debug, Clone, Copy, Hash)]
 pub struct TagId(u16);
 
 pub struct Tag {
@@ -6,51 +8,20 @@ pub struct Tag {
     name: String,
 }
 
-pub enum Query {
-    Empty,
+pub type Tags = HashSet<TagId>;
+
+pub enum Query<'a> {
+    Only(Tags),
     Tag(TagId),
-    And(&Query, &Query),
-    Or(&Query, &Query),
+    And(&'a Query<'a>, &'a Query<'a>),
+    Or(&'a Query<'a>, &'a Query<'a>),
 }
 
-// TODO benchmark BTreeSet, HashSet, persistent immutable tree
-
-pub fn match_tags(query: &Query, orig_tags: &[TagId]) -> bool {
-    let mut tags = Vec::new();
-    tags.extend_from_slice(orig_tags);
-    match_tags_mut(query, &mut tags)
-}
-
-fn match_tags_mut(query: &Query, tags: &mut Vec<TagId>) -> bool {
+pub fn match_tags(query: &Query, item_tags: &Tags) -> bool {
     match query {
-        Query::Empty => tags.is_empty(),
-        Query::Tag(id) => remove(&mut tags, id),
-        Query::And(q1, q2) => match_tags_mut(q1, &mut tags) && match_tags_mut(q2, &mut tags),
-        Query::Or(q1, q2) => {
-            let mut tags_copy = tags.clone();
-            if match_tags_mut(query, &mut tags_copy) {
-                std::mem::replace(tags, tags_copy);
-                true
-            } else {
-                let mut tags_copy = tags.clone();
-                if match_tags_mut(query, &mut tags_copy) {
-                    std::mem::replace(tags, tags_copy);
-                    true
-                } else {
-                    false
-                }
-            }
-        }
+        Query::Tag(t) => item_tags.contains(t),
+        Query::And(l, r) => match_tags(l, item_tags) && match_tags(r, item_tags),
+        Query::Or(l, r) => match_tags(l, item_tags) || match_tags(r, item_tags),
+        Query::Only(ts) => !item_tags.is_subset(ts),
     }
-}
-
-/// return true if element was found
-fn remove(tags: &mut Vec<TagId>, t: TagId) -> bool {
-    for i in 0..tags.len() {
-        if tags[i] == t {
-            tags.swap_remove(i);
-            return true;
-        }
-    }
-    return false;
 }
