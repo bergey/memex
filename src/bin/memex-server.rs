@@ -1,6 +1,3 @@
-mod note;
-mod tag;
-
 use askama::Template;
 use axum::{routing::get, Router};
 use tokio; // bring trait in scope
