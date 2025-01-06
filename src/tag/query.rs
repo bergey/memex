@@ -1,7 +1,7 @@
 use super::{AllTags, TagId};
 use std::collections::HashSet;
 use std::hash::Hash;
-use winnow::combinator::{alt, delimited, separated, terminated};
+use winnow::combinator::{alt, delimited, separated, terminated, opt};
 use winnow::prelude::*;
 use winnow::token::*;
 
@@ -14,6 +14,8 @@ pub enum Query<T: Eq + Hash> {
     /// matches single tag
     Tag(T),
     Function(Operator, Vec<Query<T>>),
+    /// unary
+    Not(Box<Query<T>>)
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -38,6 +40,7 @@ impl Query<String> {
                 Only(ids)
             }
             Function(op, args) => Function(op, args.into_iter().map(|q| q.compile(tags)).collect()),
+            Not(q) => Not(Box::new(q.compile(tags))),
         }
     }
 }
@@ -100,8 +103,17 @@ fn function<'s>(input: &mut &'s str) -> Result {
     Ok(Query::Function(op, args))
 }
 
+fn not(input: &mut &str) -> Result {
+    let arg = delimited(
+        ("(not", space),
+        query,
+        (opt(space), ')')
+    ).parse_next(input)?;
+    Ok(Query::Not(Box::new(arg)))
+}
+
 fn query<'s>(input: &mut &'s str) -> Result {
-    alt((only, function, query_tag)).parse_next(input)
+    alt((only, function, not, query_tag)).parse_next(input)
 }
 
 pub fn parse_query(input: &str) -> anyhow::Result<Query<String>> {
@@ -158,6 +170,14 @@ pub mod tests {
                 Operator::Or,
                 Vec::from([Tag("foo".to_string()), Tag("bar".to_string())])
             ))
+        )
+    }
+
+    #[test]
+    fn not() {
+        assert_eq!(
+            query(&mut "(not foo)"),
+            Ok(Not(Box::new(Tag("foo".to_string()))))
         )
     }
 }

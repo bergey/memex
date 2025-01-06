@@ -53,6 +53,7 @@ pub fn match_tags(query: &Query<TagId>, item_tags: &Tags) -> bool {
         Query::Only(ts) => item_tags.is_subset(ts),
         Query::Function(Operator::And, args) => args.iter().all(|q| match_tags(q, item_tags)),
         Query::Function(Operator::Or, args) => args.iter().any(|q| match_tags(q, item_tags)),
+        Query::Not(q) => !match_tags(q, item_tags)
     }
 }
 
