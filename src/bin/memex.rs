@@ -2,24 +2,18 @@
 
 use clap::Parser;
 use futures_util::TryStreamExt;
-use sqlx::Row;
 use sqlx::sqlite::SqlitePool;
+use sqlx::Row;
 use std::collections::{HashMap, HashSet};
+use winnow::Parser as WParser;
 
-use memex::tag::*;
 use memex::tag::query::*;
-
-#[derive(sqlx::FromRow, Debug)]
-struct ZTag {
-    pub id: i64,
-    pub title: String,
-    pub tag: String,
-}
+use memex::tag::*;
 
 #[derive(Eq, Hash, PartialEq, Debug)]
 enum DocId {
     Zotero(i64),
-    Calibre(i64),
+    // Calibre(i64),
 }
 
 struct Doc {
@@ -39,7 +33,7 @@ struct Cli {
 
 #[tokio::main()]
 async fn main() -> anyhow::Result<()> {
-    // let args = Cli::parse();
+    let args = Cli::parse();
     let pool = SqlitePool::connect("/home/bergey/Zotero/zotero.sqlite").await?;
     let mut conn = pool.acquire().await?;
 
@@ -88,8 +82,8 @@ async fn main() -> anyhow::Result<()> {
         match docs.get_mut(&DocId::Zotero(item_id)) {
             Some(doc) => {
                 doc.tags.insert(memex_tag_id.clone());
-            },
-            None => () //println!("skipping doc ID {item_id} has no title"),
+            }
+            None => (), //println!("skipping doc ID {item_id} has no title"),
         };
     }
 
@@ -99,12 +93,17 @@ async fn main() -> anyhow::Result<()> {
     for (_id, doc) in docs.iter() {
         tag_count += doc.tags.len();
     }
-    println!("{} tag-title associations", tag_count);
+    println!("{} tag-title associations\n", tag_count);
 
-    let rust_tag_id = all_tags.insert("rust".to_string());
-    let tagged = Query::Tag(rust_tag_id);
-    let only = Query::Only(HashSet::from([rust_tag_id]));
-    let query = Query::And(Box::new(tagged), Box::new(only));
+    let query = query
+        .parse(&args.query)
+        .map_err(|e| anyhow::format_err!("{e}"))?;
+    let query = query.compile(&mut all_tags);
+
+    // let rust_tag_id = all_tags.insert("rust".to_string());
+    // let tagged = Query::Tag(rust_tag_id);
+    // let only = Query::Only(HashSet::from([rust_tag_id]));
+    // let query = Query::Function(Operator::And, Vec::from([tagged, only]));
     for (id, doc) in docs.iter() {
         if match_tags(&query, &doc.tags) {
             println!("{:?} {}", id, doc.title);

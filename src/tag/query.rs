@@ -1,21 +1,25 @@
 use super::{AllTags, TagId};
 use std::collections::HashSet;
 use std::hash::Hash;
-use winnow::combinator::{alt, delimited, separated};
-use winnow::error::{ContextError, ErrMode};
+use winnow::combinator::{alt, delimited, separated, terminated};
 use winnow::prelude::*;
 use winnow::token::*;
 
 /// simplest query: rust
 /// all features:
-/// (safety | memory-safety | 'memory safety') & only(safety, memory-safety, 'memory safety')
+/// (and (or safety memory-safety 'memory safety') (only safety memory-safety 'memory safety'))
 #[derive(Debug, PartialEq)]
 pub enum Query<T: Eq + Hash> {
     Only(HashSet<T>),
-    Tag(T),
     /// matches single tag
-    And(Box<Query<T>>, Box<Query<T>>),
-    Or(Box<Query<T>>, Box<Query<T>>),
+    Tag(T),
+    Function(Operator, Vec<Query<T>>),
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum Operator {
+    And,
+    Or,
 }
 
 impl Query<String> {
@@ -33,8 +37,7 @@ impl Query<String> {
                 }
                 Only(ids)
             }
-            And(l, r) => And(Box::new(l.compile(tags)), Box::new(r.compile(tags))),
-            Or(l, r) => Or(Box::new(l.compile(tags)), Box::new(r.compile(tags))),
+            Function(op, args) => Function(op, args.into_iter().map(|q| q.compile(tags)).collect()),
         }
     }
 }
@@ -66,14 +69,15 @@ fn query_tag<'s>(input: &mut &'s str) -> Result {
     Ok(Query::Tag(t))
 }
 
+fn space(input: &mut &str) -> PResult<()> {
+    let _ = take_while(1.., SPACE).parse_next(input)?;
+    Ok(())
+}
+
 /// within parens, 1 or more tags separated by a comma & optional whitespace
 fn only<'s>(input: &mut &'s str) -> Result {
-    let tags: Vec<String> = delimited(
-        "only(",
-        separated(1.., tag, (',', take_while(0.., SPACE))),
-        ')',
-    )
-    .parse_next(input)?;
+    let tags: Vec<String> =
+        delimited(terminated("(only", space), separated(1.., tag, space), ')').parse_next(input)?;
     let mut set = HashSet::new();
     for t in tags {
         set.insert(t);
@@ -81,26 +85,23 @@ fn only<'s>(input: &mut &'s str) -> Result {
     Ok(Query::Only(set))
 }
 
-fn binop<'s>(input: &mut &'s str) -> Result {
-    let (l, op, r) = (query, one_of(['&', '|']), query).parse_next(input)?;
-    match op {
-        '&' => Ok(Query::And(Box::new(l), Box::new(r))),
-        '|' => Ok(Query::Or(Box::new(l), Box::new(r))),
-        _ => Err(ErrMode::Cut(ContextError::new())),
-    }
+fn op(input: &mut &str) -> PResult<Operator> {
+    use Operator::*;
+    alt(("and".value(And), "or".value(Or))).parse_next(input)
 }
 
-fn space(&mut str) -> Result {
-    take_while(0.., SPACE).parse_next(input)
+fn function<'s>(input: &mut &'s str) -> Result {
+    let (op, args) = delimited(
+        '(',
+        (terminated(op, space), separated(1.., query, space)),
+        ')',
+    )
+    .parse_next(input)?;
+    Ok(Query::Function(op, args))
 }
 
-fn parens(&mut str) -> Result {
-    delimited(('(', space), query, (space, ')')).parse_next(input)
-}
-
-fn query<'s>(input: &mut &'s str) -> Result {
-    // alt((binop, only, query_tag)).parse_next(input)
-    separated
+pub fn query<'s>(input: &mut &'s str) -> Result {
+    alt((only, function, query_tag)).parse_next(input)
 }
 
 #[cfg(test)]
@@ -116,7 +117,7 @@ pub mod tests {
     #[test]
     fn only_foo() {
         assert_eq!(
-            query(&mut "only(foo)"),
+            query(&mut "(only foo)"),
             Ok(Only(HashSet::from(["foo".to_string()])))
         )
     }
@@ -124,18 +125,23 @@ pub mod tests {
     #[test]
     fn only_foo_bar() {
         assert_eq!(
-            query(&mut "only(foo, bar))"),
+            query(&mut "(only foo bar))"),
             Ok(Only(HashSet::from(["foo".to_string(), "bar".to_string()])))
         )
     }
 
     #[test]
+    fn op_and() {
+        assert_eq!(op(&mut "and"), Ok(Operator::And))
+    }
+
+    #[test]
     fn and() {
         assert_eq!(
-            query(&mut "foo & bar"),
-            Ok(And(
-                Box::new(Tag("foo".to_string())),
-                Box::new(Tag("bar".to_string()))
+            query(&mut "(and foo bar)"),
+            Ok(Function(
+                Operator::And,
+                Vec::from([Tag("foo".to_string()), Tag("bar".to_string())])
             ))
         )
     }
@@ -143,10 +149,10 @@ pub mod tests {
     #[test]
     fn or() {
         assert_eq!(
-            query(&mut "foo | bar"),
-            Ok(Or(
-                Box::new(Tag("foo".to_string())),
-                Box::new(Tag("bar".to_string()))
+            query(&mut "(or foo bar)"),
+            Ok(Function(
+                Operator::Or,
+                Vec::from([Tag("foo".to_string()), Tag("bar".to_string())])
             ))
         )
     }

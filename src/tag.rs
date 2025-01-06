@@ -1,5 +1,5 @@
 pub mod query;
-use query::Query;
+use query::{Operator, Query};
 
 use std::collections::{HashMap, HashSet};
 
@@ -10,7 +10,7 @@ pub type Tags = HashSet<TagId>;
 
 pub struct AllTags {
     names: Vec<String>,
-    ids: HashMap<String, TagId>
+    ids: HashMap<String, TagId>,
 }
 
 impl AllTags {
@@ -50,9 +50,9 @@ impl AllTags {
 pub fn match_tags(query: &Query<TagId>, item_tags: &Tags) -> bool {
     match query {
         Query::Tag(t) => item_tags.contains(t),
-        Query::And(l, r) => match_tags(l, item_tags) && match_tags(r, item_tags),
-        Query::Or(l, r) => match_tags(l, item_tags) || match_tags(r, item_tags),
         Query::Only(ts) => item_tags.is_subset(ts),
+        Query::Function(Operator::And, args) => args.iter().all(|q| match_tags(q, item_tags)),
+        Query::Function(Operator::Or, args) => args.iter().any(|q| match_tags(q, item_tags)),
     }
 }
 
@@ -111,7 +111,13 @@ pub mod tests {
     fn assert_a_only_a(item_tags: Tags, truth: bool) {
         let tagged = Query::Tag(TagId(1));
         let only = Query::Only(a());
-        assert_eq!(match_tags(&Query::And(Box::new(tagged), Box::new(only)), &item_tags), truth);
+        assert_eq!(
+            match_tags(
+                &Query::Function(Operator::And, Vec::from([tagged, only])),
+                &item_tags
+            ),
+            truth
+        );
     }
 
     #[test]
