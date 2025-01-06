@@ -14,29 +14,27 @@ pub async fn load_docs(
     let pool = SqlitePool::connect(library_path).await?;
     let mut conn = pool.acquire().await?;
 
-    // assign our own IDs, so we can merge tags from multiple libraries
-    let zot_tags = {
-        let mut zot_tags: HashMap<i64, TagId> = HashMap::new();
-        let mut rows = sqlx::query("select tagId, name from tags").fetch(&mut *conn);
+    // tags
+    let calibre_tags = {
+        let mut calibre_tags: HashMap<i64, TagId> = HashMap::new();
+        let mut rows = sqlx::query("select id, name from tags").fetch(&mut *conn);
         while let Some(row) = rows.try_next().await? {
-            let zid = row.try_get("tagID")?;
+            let cid = row.try_get("id")?;
             let name = row.try_get("name")?;
             let memex_id = all_tags.insert(name);
-            zot_tags.insert(zid, memex_id);
+            calibre_tags.insert(cid, memex_id);
         }
-        zot_tags
+        calibre_tags
     };
 
-    // titles
+    //titles
     {
-        // TODO emails have subject, not title
-        // exclude attachments (even if orphaned)
-        let mut rows = sqlx::query("select itemID, value as title from items join itemData using (itemID) join fieldsCombined using (fieldID) join itemDataValues using (valueID) where fieldName = 'title' and itemTypeID != 3").fetch(&mut *conn);
+        let mut rows = sqlx::query("select id, title from books").fetch(&mut *conn);
         while let Some(row) = rows.try_next().await? {
-            let zid = row.try_get("itemID")?;
+            let cid = row.try_get("id")?;
             let title = row.try_get("title")?;
             docs.insert(
-                DocId::Zotero(zid),
+                DocId::Calibre(cid),
                 Doc {
                     title: title,
                     tags: HashSet::new(),
@@ -46,14 +44,14 @@ pub async fn load_docs(
     }
 
     // tag the documents
-    let mut rows = sqlx::query("select itemID, tagID from itemTags").fetch(&mut *conn);
+    let mut rows = sqlx::query("select book, tag from books_tags_link").fetch(&mut *conn);
     while let Some(row) = rows.try_next().await? {
-        let item_id = row.try_get("itemID")?;
-        let z_tag_id = row.try_get("tagID")?;
-        let memex_tag_id = zot_tags
-            .get(&z_tag_id)
+        let book_id = row.try_get("book")?;
+        let c_tag_id = row.try_get("tag")?;
+        let memex_tag_id = calibre_tags
+            .get(&c_tag_id)
             .ok_or(anyhow::anyhow!("tag ID violates foreign key constraint"))?;
-        match docs.get_mut(&DocId::Zotero(item_id)) {
+        match docs.get_mut(&DocId::Calibre(book_id)) {
             Some(doc) => {
                 doc.tags.insert(memex_tag_id.clone());
             }

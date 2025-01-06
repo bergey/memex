@@ -27,7 +27,11 @@ async fn main() -> anyhow::Result<()> {
     let mut all_tags = AllTags::new();
     let mut docs: HashMap<DocId, Doc> = HashMap::new();
 
-    memex::zotero::load_docs(&mut all_tags, &mut docs).await?;
+    // TODO --library arg
+    if let Ok(home) = std::env::var("HOME") {
+        memex::zotero::load_docs(&mut all_tags, &mut docs, &format!("{home}/Zotero/zotero.sqlite")).await?;
+        memex::calibre::load_docs(&mut all_tags, &mut docs, &format!("{home}/Calibre/metadata.db")).await?;
+    }
 
     if args.stats {
         print_stats(&all_tags, &docs);
