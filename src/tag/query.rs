@@ -1,7 +1,7 @@
 use super::{AllTags, TagId};
 use std::collections::HashSet;
 use std::hash::Hash;
-use winnow::combinator::{alt, delimited, separated, terminated, opt};
+use winnow::combinator::{alt, delimited, opt, separated, terminated};
 use winnow::prelude::*;
 use winnow::token::*;
 
@@ -15,7 +15,7 @@ pub enum Query<T: Eq + Hash> {
     Tag(T),
     Function(Operator, Vec<Query<T>>),
     /// unary
-    Not(Box<Query<T>>)
+    Not(Box<Query<T>>),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -79,8 +79,12 @@ fn space(input: &mut &str) -> PResult<()> {
 
 /// within parens, 1 or more tags separated by a comma & optional whitespace
 fn only(input: &mut &str) -> Result {
-    let tags: Vec<String> =
-        delimited(terminated("(only", space), separated(1.., tag, space), ')').parse_next(input)?;
+    let tags: Vec<String> = delimited(
+        ("(only", space),
+        separated(1.., tag, space),
+        (opt(space), ')'),
+    )
+        .parse_next(input)?;
     let mut set = HashSet::new();
     for t in tags {
         set.insert(t);
@@ -97,18 +101,14 @@ fn function(input: &mut &str) -> Result {
     let (op, args) = delimited(
         '(',
         (terminated(op, space), separated(1.., query, space)),
-        ')',
+        (opt(space), ')'),
     )
     .parse_next(input)?;
     Ok(Query::Function(op, args))
 }
 
 fn not(input: &mut &str) -> Result {
-    let arg = delimited(
-        ("(not", space),
-        query,
-        (opt(space), ')')
-    ).parse_next(input)?;
+    let arg = delimited(("(not", space), query, (opt(space), ')')).parse_next(input)?;
     Ok(Query::Not(Box::new(arg)))
 }
 
