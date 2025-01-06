@@ -1,6 +1,6 @@
 # memex
 
-Enhanced search for Zotero (and soon Calibre).
+Enhanced search for Zotero and Calibre.
 
 - not ()
 - or
