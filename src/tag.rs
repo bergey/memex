@@ -111,7 +111,7 @@ pub mod tests {
     fn assert_a_only_a(item_tags: Tags, truth: bool) {
         let tagged = Query::Tag(TagId(1));
         let only = Query::Only(a());
-        assert_eq!(match_tags(&Query::And(&tagged, &only), &item_tags), truth);
+        assert_eq!(match_tags(&Query::And(Box::new(tagged), Box::new(only)), &item_tags), truth);
     }
 
     #[test]
