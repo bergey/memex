@@ -12,6 +12,8 @@ use memex::{Doc, DocId};
 struct Cli {
     #[command()]
     query: String,
+    #[arg(long = "stats", help = "print stats about library size")]
+    stats: bool,
     // #[arg(long="library")]
     // libraries: Vec<String>
 }
@@ -27,13 +29,9 @@ async fn main() -> anyhow::Result<()> {
 
     memex::zotero::load_docs(&mut all_tags, &mut docs).await?;
 
-    println!("{} tags", all_tags.len());
-    println!("{} titles", docs.len());
-    let mut tag_count = 0;
-    for (_id, doc) in docs.iter() {
-        tag_count += doc.tags.len();
+    if args.stats {
+        print_stats(&all_tags, &docs);
     }
-    println!("{} tag-title associations\n", tag_count);
 
     let query = query.compile(&mut all_tags);
     for (id, doc) in docs.iter() {
@@ -43,4 +41,14 @@ async fn main() -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+fn print_stats(all_tags: &AllTags, docs: &HashMap<DocId, Doc>) {
+    println!("{} tags", all_tags.len());
+    println!("{} titles", docs.len());
+    let mut tag_count = 0;
+    for (_id, doc) in docs.iter() {
+        tag_count += doc.tags.len();
+    }
+    println!("{} tag-title associations\n", tag_count);
 }
