@@ -1,4 +1,4 @@
-use super::{Doc, DocId};
+use super::Doc;
 use crate::tag::{AllTags, TagId};
 
 use futures_util::TryStreamExt;
@@ -8,11 +8,11 @@ use std::collections::{HashMap, HashSet};
 
 pub async fn load_docs(
     all_tags: &mut AllTags,
-    docs: &mut HashMap<DocId, Doc>,
     library_path: &str,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<HashMap<i64, Doc>> {
     let pool = SqlitePool::connect(library_path).await?;
     let mut conn = pool.acquire().await?;
+    let mut docs = HashMap::new();
 
     // assign our own IDs, so we can merge tags from multiple libraries
     let zot_tags = {
@@ -36,7 +36,7 @@ pub async fn load_docs(
             let zid = row.try_get("itemID")?;
             let title = row.try_get("title")?;
             docs.insert(
-                DocId::Zotero(zid),
+                zid,
                 Doc {
                     title: title,
                     tags: HashSet::new(),
@@ -53,7 +53,7 @@ pub async fn load_docs(
         let memex_tag_id = zot_tags
             .get(&z_tag_id)
             .ok_or(anyhow::anyhow!("tag ID violates foreign key constraint"))?;
-        match docs.get_mut(&DocId::Zotero(item_id)) {
+        match docs.get_mut(&item_id) {
             Some(doc) => {
                 doc.tags.insert(memex_tag_id.clone());
             }
@@ -61,5 +61,5 @@ pub async fn load_docs(
         };
     }
 
-    Ok(())
+    Ok(docs)
 }

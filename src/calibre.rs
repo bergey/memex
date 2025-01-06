@@ -1,4 +1,4 @@
-use super::{Doc, DocId};
+use super::Doc;
 use crate::tag::{AllTags, TagId};
 
 use futures_util::TryStreamExt;
@@ -8,11 +8,11 @@ use std::collections::{HashMap, HashSet};
 
 pub async fn load_docs(
     all_tags: &mut AllTags,
-    docs: &mut HashMap<DocId, Doc>,
     library_path: &str,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<HashMap<i64, Doc>> {
     let pool = SqlitePool::connect(library_path).await?;
     let mut conn = pool.acquire().await?;
+    let mut docs = HashMap::new();
 
     // tags
     let calibre_tags = {
@@ -34,7 +34,7 @@ pub async fn load_docs(
             let cid = row.try_get("id")?;
             let title = row.try_get("title")?;
             docs.insert(
-                DocId::Calibre(cid),
+                cid,
                 Doc {
                     title: title,
                     tags: HashSet::new(),
@@ -51,7 +51,7 @@ pub async fn load_docs(
         let memex_tag_id = calibre_tags
             .get(&c_tag_id)
             .ok_or(anyhow::anyhow!("tag ID violates foreign key constraint"))?;
-        match docs.get_mut(&DocId::Calibre(book_id)) {
+        match docs.get_mut(&book_id) {
             Some(doc) => {
                 doc.tags.insert(memex_tag_id.clone());
             }
@@ -59,5 +59,5 @@ pub async fn load_docs(
         };
     }
 
-    Ok(())
+    Ok(docs)
 }
