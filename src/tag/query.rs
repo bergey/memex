@@ -52,22 +52,22 @@ const NOT_TAG: [char; 4] = [' ', '\t', '(', ')'];
 type Result = PResult<Query<String>>;
 
 /// single or double quote
-fn quoted_tag<'s>(input: &mut &'s str) -> PResult<String> {
+fn quoted_tag(input: &mut &str) -> PResult<String> {
     let quote = one_of(QUOTATION_MARKS).parse_next(input)?;
     let tag = take_until(1.., quote).parse_next(input)?;
     Ok(tag.to_string())
 }
 
-fn bare_tag<'s>(input: &mut &'s str) -> PResult<String> {
+fn bare_tag(input: &mut &str) -> PResult<String> {
     let tag = take_till(1.., NOT_TAG).parse_next(input)?;
     Ok(tag.to_string())
 }
 
-fn tag<'s>(input: &mut &'s str) -> PResult<String> {
+fn tag(input: &mut &str) -> PResult<String> {
     alt((quoted_tag, bare_tag)).parse_next(input)
 }
 
-fn query_tag<'s>(input: &mut &'s str) -> Result {
+fn query_tag(input: &mut &str) -> Result {
     let t = tag.parse_next(input)?;
     Ok(Query::Tag(t))
 }
@@ -78,7 +78,7 @@ fn space(input: &mut &str) -> PResult<()> {
 }
 
 /// within parens, 1 or more tags separated by a comma & optional whitespace
-fn only<'s>(input: &mut &'s str) -> Result {
+fn only(input: &mut &str) -> Result {
     let tags: Vec<String> =
         delimited(terminated("(only", space), separated(1.., tag, space), ')').parse_next(input)?;
     let mut set = HashSet::new();
@@ -93,7 +93,7 @@ fn op(input: &mut &str) -> PResult<Operator> {
     alt(("and".value(And), "or".value(Or))).parse_next(input)
 }
 
-fn function<'s>(input: &mut &'s str) -> Result {
+fn function(input: &mut &str) -> Result {
     let (op, args) = delimited(
         '(',
         (terminated(op, space), separated(1.., query, space)),
@@ -112,7 +112,7 @@ fn not(input: &mut &str) -> Result {
     Ok(Query::Not(Box::new(arg)))
 }
 
-fn query<'s>(input: &mut &'s str) -> Result {
+fn query(input: &mut &str) -> Result {
     alt((only, function, not, query_tag)).parse_next(input)
 }
 
