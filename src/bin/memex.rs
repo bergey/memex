@@ -16,8 +16,11 @@ struct Cli {
     stats: bool,
     #[arg(short = 'v', long = "verbose", help = "print what we're doing")]
     verbose: bool,
-    // #[arg(long="library")]
-    // libraries: Vec<String>
+    #[arg(
+        long = "library",
+        help = "path to library; suppresses default search locations"
+    )]
+    libraries: Vec<String>,
 }
 
 /// DB path -> ID in DB -> Doc
@@ -32,26 +35,40 @@ async fn main() -> anyhow::Result<()> {
     let mut all_tags = AllTags::new();
     let mut docs: Docs = HashMap::new();
 
-    // TODO --library arg
-    if let Ok(home) = std::env::var("HOME") {
-        let library_path = format!("{home}/Zotero/zotero.sqlite");
-        docs.insert(
-            library_path.clone(),
-            memex::zotero::load_docs(&mut all_tags, &library_path).await?,
-        );
-        for glob_path in glob::glob(&format!("{home}/Calibre/**/metadata.db"))? {
-            let ok_path = glob_path?;
-            let library_path = ok_path
-                .to_str()
-                .ok_or(anyhow::anyhow!("path is not unicode"))?;
-            if args.verbose {
-                println!("loading from {library_path}");
+    let mut libraries = args.libraries.clone();
+    if libraries.is_empty() {
+        if let Ok(home) = std::env::var("HOME") {
+            let path = format!("{home}/Zotero/zotero.sqlite");
+            if std::path::Path::new(&path).exists() {
+                libraries.push(path);
             }
-            docs.insert(
-                library_path.to_string(),
-                memex::calibre::load_docs(&mut all_tags, library_path).await?,
-            );
+            for glob_path in glob::glob(&format!("{home}/Calibre/**/metadata.db"))? {
+                let ok_path = glob_path?;
+                let library_path = ok_path
+                    .to_str()
+                    .ok_or(anyhow::anyhow!("path is not unicode"))?;
+                libraries.push(library_path.to_string());
+            }
         }
+    }
+
+    for library_path in libraries {
+        if !std::path::Path::new(&library_path).exists() {
+            println!("skipping {library_path}, file does not exist");
+            continue;
+        }
+        if args.verbose {
+            println!("loading from {library_path}");
+        }
+        let new_docs = if library_path.ends_with("zotero.sqlite") {
+            memex::zotero::load_docs(&mut all_tags, &library_path).await?
+        } else if library_path.ends_with("metadata.db") {
+            memex::calibre::load_docs(&mut all_tags, &library_path).await?
+        } else {
+            println!("skipping {library_path}, unknown format");
+            HashMap::new()
+        };
+        docs.insert(library_path.clone(), new_docs);
     }
 
     if args.stats {
