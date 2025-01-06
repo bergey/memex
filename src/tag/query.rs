@@ -100,8 +100,12 @@ fn function<'s>(input: &mut &'s str) -> Result {
     Ok(Query::Function(op, args))
 }
 
-pub fn query<'s>(input: &mut &'s str) -> Result {
+fn query<'s>(input: &mut &'s str) -> Result {
     alt((only, function, query_tag)).parse_next(input)
+}
+
+pub fn parse_query(input: &str) -> anyhow::Result<Query<String>> {
+    query.parse(input).map_err(|e| anyhow::format_err!("{e}"))
 }
 
 #[cfg(test)]

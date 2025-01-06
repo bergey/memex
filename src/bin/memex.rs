@@ -2,7 +2,6 @@
 
 use clap::Parser;
 use std::collections::HashMap;
-use winnow::Parser as WParser;
 
 use memex::tag::query::*;
 use memex::tag::*;
@@ -20,6 +19,8 @@ struct Cli {
 #[tokio::main()]
 async fn main() -> anyhow::Result<()> {
     let args = Cli::parse();
+    // fail fast if we can't parse it
+    let query = parse_query(&args.query)?;
 
     let mut all_tags = AllTags::new();
     let mut docs: HashMap<DocId, Doc> = HashMap::new();
@@ -34,15 +35,7 @@ async fn main() -> anyhow::Result<()> {
     }
     println!("{} tag-title associations\n", tag_count);
 
-    let query = query
-        .parse(&args.query)
-        .map_err(|e| anyhow::format_err!("{e}"))?;
     let query = query.compile(&mut all_tags);
-
-    // let rust_tag_id = all_tags.insert("rust".to_string());
-    // let tagged = Query::Tag(rust_tag_id);
-    // let only = Query::Only(HashSet::from([rust_tag_id]));
-    // let query = Query::Function(Operator::And, Vec::from([tagged, only]));
     for (id, doc) in docs.iter() {
         if match_tags(&query, &doc.tags) {
             println!("{:?} {}", id, doc.title);
