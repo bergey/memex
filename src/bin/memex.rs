@@ -2,6 +2,10 @@
 
 use clap::Parser;
 use std::collections::HashMap;
+use std::ffi::OsStr;
+use std::fs::File;
+use std::io::{self, Write};
+use std::path::Path;
 
 use memex::tag::query::*;
 use memex::tag::*;
@@ -29,6 +33,8 @@ struct Cli {
         help = "path to library; suppresses default search locations"
     )]
     libraries: Vec<String>,
+    #[arg(short = 'o', help = "output to file")]
+    output_file: Option<Box<Path>>,
 }
 
 impl Cli {
@@ -51,6 +57,19 @@ async fn main() -> anyhow::Result<()> {
     let query = match args.query {
         Some(q) => Some(parse_query(&q)?),
         None => None,
+    };
+    let mut output: Box<dyn Write> = match &args.output_file {
+        None => {
+            let stdout = io::stdout();
+            Box::new(stdout.lock())
+        }
+        Some(path) => Box::new(
+            File::options()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(path)?,
+        ),
     };
 
     let mut all_tags = AllTags::new();
@@ -93,10 +112,13 @@ async fn main() -> anyhow::Result<()> {
     }
 
     if args.stats {
-        print_stats(&all_tags, &docs);
+        print_stats(&all_tags, &docs, &mut *output)?;
     }
 
     let mut tag_counts = memex::stats::TagCounts::new();
+    let is_org = args
+        .output_file
+        .map_or(false, |path| path.extension() == Some(OsStr::new("org")));
 
     if let Some(query) = query {
         let query = query.compile(&mut all_tags);
@@ -106,10 +128,18 @@ async fn main() -> anyhow::Result<()> {
                 if match_tags(&query, &doc.tags) {
                     if args.matches {
                         if first {
-                            println!("\n{path}");
+                            if is_org {
+                                writeln!(output, "* {path}")?;
+                            } else {
+                                writeln!(output, "\n{path}")?;
+                            }
                             first = false;
                         }
-                        println!("  {} {}", "todo", doc.title);
+                        if is_org {
+                            writeln!(output, "- [[{}][{}]]", doc.link, doc.title)?;
+                        } else {
+                            writeln!(output, "  {}", doc.title)?;
+                        }
                     }
                     if args.stats {
                         tag_counts.count(&doc.tags);
@@ -130,15 +160,15 @@ async fn main() -> anyhow::Result<()> {
         tag_counts.sort_by(|(_, a), (_, b)| b.cmp(a));
         for (t, ct) in &tag_counts[..args.top] {
             let tag = all_tags.name(*t).unwrap();
-            println!("{tag}: {ct}");
+            writeln!(output, "{tag}: {ct}")?;
         }
     }
 
     Ok(())
 }
 
-fn print_stats(all_tags: &AllTags, libraries: &Docs) {
-    println!("{} tags", all_tags.len());
+fn print_stats(all_tags: &AllTags, libraries: &Docs, output: &mut dyn Write) -> anyhow::Result<()> {
+    writeln!(output, "{} tags", all_tags.len())?;
     let mut titles_count = 0;
     let mut links_count = 0;
 
@@ -149,6 +179,7 @@ fn print_stats(all_tags: &AllTags, libraries: &Docs) {
         }
     }
 
-    println!("{} titles", titles_count);
-    println!("{} tag-title associations\n", links_count);
+    writeln!(output, "{} titles", titles_count)?;
+    writeln!(output, "{} tag-title associations\n", links_count)?;
+    Ok(())
 }

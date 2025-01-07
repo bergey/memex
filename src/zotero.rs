@@ -31,14 +31,17 @@ pub async fn load_docs(
     {
         // TODO emails have subject, not title
         // exclude attachments (even if orphaned)
-        let mut rows = sqlx::query("select itemID, value as title from items join itemData using (itemID) join fieldsCombined using (fieldID) join itemDataValues using (valueID) where fieldName = 'title' and itemTypeID != 3").fetch(&mut *conn);
+        let mut rows = sqlx::query("select itemID, libraryID, key, value as title from items join itemData using (itemID) join fieldsCombined using (fieldID) join itemDataValues using (valueID) where fieldName = 'title' and itemTypeID != 3").fetch(&mut *conn);
         while let Some(row) = rows.try_next().await? {
-            let zid = row.try_get("itemID")?;
+            let item_id = row.try_get("itemID")?;
+            let library_id: i64 = row.try_get("libraryID")?;
+            let key: &str = row.try_get("key")?;
             let title = row.try_get("title")?;
             docs.insert(
-                zid,
+                item_id,
                 Doc {
                     title: title,
+                    link: format!("zotero://select/items/{library_id}_{key}"),
                     tags: HashSet::new(),
                 },
             );

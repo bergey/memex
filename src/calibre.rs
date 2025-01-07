@@ -37,6 +37,7 @@ pub async fn load_docs(
                 cid,
                 Doc {
                     title: title,
+                    link: "".to_string(),
                     tags: HashSet::new(),
                 },
             );
