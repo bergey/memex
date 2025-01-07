@@ -5,11 +5,15 @@ use futures_util::TryStreamExt;
 use sqlx::sqlite::SqlitePool;
 use sqlx::Row;
 use std::collections::{HashMap, HashSet};
+use std::path::Path;
 
-pub async fn load_docs(
-    all_tags: &mut AllTags,
-    library_path: &str,
-) -> anyhow::Result<Vec<Doc>> {
+pub async fn load_docs(all_tags: &mut AllTags, library_path: &str) -> anyhow::Result<Vec<Doc>> {
+    // TODO replace space by _
+    let library_name = Path::new(library_path).parent().map_or("", |path| {
+        path.components()
+            .last()
+            .map_or("", |c| c.as_os_str().to_str().unwrap_or(""))
+    });
     let pool = SqlitePool::connect(library_path).await?;
     let mut conn = pool.acquire().await?;
     let mut docs: HashMap<i64, Doc> = HashMap::new();
@@ -31,13 +35,13 @@ pub async fn load_docs(
     {
         let mut rows = sqlx::query("select id, title from books").fetch(&mut *conn);
         while let Some(row) = rows.try_next().await? {
-            let cid = row.try_get("id")?;
+            let id = row.try_get("id")?;
             let title = row.try_get("title")?;
             docs.insert(
-                cid,
+                id,
                 Doc {
                     title: title,
-                    link: "".to_string(),
+                    link: format!("calibre://show-book/{library_name}/{id}"),
                     tags: HashSet::new(),
                 },
             );
