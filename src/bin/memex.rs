@@ -14,6 +14,8 @@ struct Cli {
     query: Option<String>,
     #[arg(long = "stats", help = "print stats about library size")]
     stats: bool,
+    #[arg(long="top", help = "print stats on this many common tags", default_value_t = 5)]
+    top: usize,
     #[arg(short = 'v', long = "verbose", help = "print what we're doing")]
     verbose: bool,
     #[arg(
@@ -78,6 +80,8 @@ async fn main() -> anyhow::Result<()> {
         print_stats(&all_tags, &docs);
     }
 
+    let mut tag_counts = memex::stats::TagCounts::new();
+
     if let Some(query) = query {
         let query = query.compile(&mut all_tags);
         for (path, docs) in docs.iter() {
@@ -89,8 +93,26 @@ async fn main() -> anyhow::Result<()> {
                         first = false;
                     }
                     println!("  {} {}", id, doc.title);
+                    if args.stats {
+                        tag_counts.count(&doc.tags);
+                    }
                 }
             }
+        }
+    } else if args.stats {
+        for (_, docs) in docs.iter() {
+            for (_, doc) in docs.iter() {
+                tag_counts.count(&doc.tags);
+            }
+        }
+    }
+
+    if args.stats {
+        let mut tag_counts = tag_counts.to_vec();
+        tag_counts.sort_by(|(_, a), (_, b)| b.cmp(a));
+        for (t, ct) in &tag_counts[..args.top] {
+            let tag = all_tags.name(*t).unwrap();
+            println!("{tag}: {ct}");
         }
     }
 
