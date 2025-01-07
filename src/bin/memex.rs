@@ -98,18 +98,18 @@ async fn main() -> anyhow::Result<()> {
 
     for library_path in libraries {
         if !std::path::Path::new(&library_path).exists() {
-            println!("skipping {library_path}, file does not exist");
+            eprintln!("skipping {library_path}, file does not exist");
             continue;
         }
         if args.verbose {
-            println!("loading from {library_path}");
+            eprintln!("loading from {library_path}");
         }
         let new_docs = if library_path.ends_with("zotero.sqlite") {
             memex::zotero::load_docs(&mut all_tags, &library_path).await?
         } else if library_path.ends_with("metadata.db") {
             memex::calibre::load_docs(&mut all_tags, &library_path).await?
         } else {
-            println!("skipping {library_path}, unknown format");
+            eprintln!("skipping {library_path}, unknown format");
             Vec::new()
         };
         docs.insert(library_path.clone(), new_docs);
@@ -171,7 +171,7 @@ async fn main() -> anyhow::Result<()> {
 
     if args.verbose {
         let total_t = start.elapsed();
-        println!(
+        eprintln!(
             "parsing {}ms load {}ms total {}ms",
             parsing_t.as_millis(),
             load_t.as_millis(),
