@@ -31,15 +31,22 @@ struct Cli {
     libraries: Vec<String>,
 }
 
+impl Cli {
+    pub fn init() -> Self {
+        let mut args = Cli::parse();
+        if !args.matches && !args.stats {
+            args.matches = true;
+        }
+        args
+    }
+}
+
 /// DB path -> ID in DB -> Doc
 type Docs = HashMap<String, HashMap<i64, Doc>>;
 
 #[tokio::main()]
 async fn main() -> anyhow::Result<()> {
-    let mut args = Cli::parse();
-    if !args.matches && !args.stats {
-        args.matches = true;
-    }
+    let args = Cli::init();
     // fail fast if we can't parse it
     let query = match args.query {
         Some(q) => Some(parse_query(&q)?),
