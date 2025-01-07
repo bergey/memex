@@ -12,9 +12,15 @@ use memex::Doc;
 struct Cli {
     #[command()]
     query: Option<String>,
+    #[arg(long = "matches", help = "print matching documents (default)")]
+    matches: bool,
     #[arg(long = "stats", help = "print stats about library size")]
     stats: bool,
-    #[arg(long="top", help = "print stats on this many common tags", default_value_t = 5)]
+    #[arg(
+        long = "top",
+        help = "print stats on this many common tags",
+        default_value_t = 5
+    )]
     top: usize,
     #[arg(short = 'v', long = "verbose", help = "print what we're doing")]
     verbose: bool,
@@ -30,7 +36,10 @@ type Docs = HashMap<String, HashMap<i64, Doc>>;
 
 #[tokio::main()]
 async fn main() -> anyhow::Result<()> {
-    let args = Cli::parse();
+    let mut args = Cli::parse();
+    if !args.matches && !args.stats {
+        args.matches = true;
+    }
     // fail fast if we can't parse it
     let query = match args.query {
         Some(q) => Some(parse_query(&q)?),
@@ -88,11 +97,13 @@ async fn main() -> anyhow::Result<()> {
             let mut first = true;
             for (id, doc) in docs.iter() {
                 if match_tags(&query, &doc.tags) {
-                    if first {
-                        println!("\n{path}");
-                        first = false;
+                    if args.matches {
+                        if first {
+                            println!("\n{path}");
+                            first = false;
+                        }
+                        println!("  {} {}", id, doc.title);
                     }
-                    println!("  {} {}", id, doc.title);
                     if args.stats {
                         tag_counts.count(&doc.tags);
                     }
