@@ -11,7 +11,7 @@ use memex::Doc;
 #[command(author, version, about, long_about = None)]
 struct Cli {
     #[command()]
-    query: String,
+    query: Option<String>,
     #[arg(long = "stats", help = "print stats about library size")]
     stats: bool,
     #[arg(short = 'v', long = "verbose", help = "print what we're doing")]
@@ -30,7 +30,10 @@ type Docs = HashMap<String, HashMap<i64, Doc>>;
 async fn main() -> anyhow::Result<()> {
     let args = Cli::parse();
     // fail fast if we can't parse it
-    let query = parse_query(&args.query)?;
+    let query = match args.query {
+        Some(q) => Some(parse_query(&q)?),
+        None => None,
+    };
 
     let mut all_tags = AllTags::new();
     let mut docs: Docs = HashMap::new();
@@ -75,16 +78,18 @@ async fn main() -> anyhow::Result<()> {
         print_stats(&all_tags, &docs);
     }
 
-    let query = query.compile(&mut all_tags);
-    for (path, docs) in docs.iter() {
-        let mut first = true;
-        for (id, doc) in docs.iter() {
-            if match_tags(&query, &doc.tags) {
-                if first {
-                    println!("\n{path}");
-                    first = false;
+    if let Some(query) = query {
+        let query = query.compile(&mut all_tags);
+        for (path, docs) in docs.iter() {
+            let mut first = true;
+            for (id, doc) in docs.iter() {
+                if match_tags(&query, &doc.tags) {
+                    if first {
+                        println!("\n{path}");
+                        first = false;
+                    }
+                    println!("  {} {}", id, doc.title);
                 }
-                println!("  {} {}", id, doc.title);
             }
         }
     }
