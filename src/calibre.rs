@@ -9,10 +9,10 @@ use std::collections::{HashMap, HashSet};
 pub async fn load_docs(
     all_tags: &mut AllTags,
     library_path: &str,
-) -> anyhow::Result<HashMap<i64, Doc>> {
+) -> anyhow::Result<Vec<Doc>> {
     let pool = SqlitePool::connect(library_path).await?;
     let mut conn = pool.acquire().await?;
-    let mut docs = HashMap::new();
+    let mut docs: HashMap<i64, Doc> = HashMap::new();
 
     // tags
     let calibre_tags = {
@@ -59,5 +59,5 @@ pub async fn load_docs(
         };
     }
 
-    Ok(docs)
+    Ok(docs.into_values().collect())
 }

@@ -9,10 +9,10 @@ use std::collections::{HashMap, HashSet};
 pub async fn load_docs(
     all_tags: &mut AllTags,
     library_path: &str,
-) -> anyhow::Result<HashMap<i64, Doc>> {
+) -> anyhow::Result<Vec<Doc>> {
     let pool = SqlitePool::connect(library_path).await?;
     let mut conn = pool.acquire().await?;
-    let mut docs = HashMap::new();
+    let mut docs: HashMap<i64, Doc> = HashMap::new();
 
     // assign our own IDs, so we can merge tags from multiple libraries
     let zot_tags = {
@@ -61,5 +61,5 @@ pub async fn load_docs(
         };
     }
 
-    Ok(docs)
+    Ok(docs.into_values().collect())
 }

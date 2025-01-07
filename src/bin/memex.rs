@@ -41,8 +41,8 @@ impl Cli {
     }
 }
 
-/// DB path -> ID in DB -> Doc
-type Docs = HashMap<String, HashMap<i64, Doc>>;
+/// DB path -> [Doc]
+type Docs = HashMap<String, Vec<Doc>>;
 
 #[tokio::main()]
 async fn main() -> anyhow::Result<()> {
@@ -87,7 +87,7 @@ async fn main() -> anyhow::Result<()> {
             memex::calibre::load_docs(&mut all_tags, &library_path).await?
         } else {
             println!("skipping {library_path}, unknown format");
-            HashMap::new()
+            Vec::new()
         };
         docs.insert(library_path.clone(), new_docs);
     }
@@ -102,14 +102,14 @@ async fn main() -> anyhow::Result<()> {
         let query = query.compile(&mut all_tags);
         for (path, docs) in docs.iter() {
             let mut first = true;
-            for (id, doc) in docs.iter() {
+            for doc in docs.iter() {
                 if match_tags(&query, &doc.tags) {
                     if args.matches {
                         if first {
                             println!("\n{path}");
                             first = false;
                         }
-                        println!("  {} {}", id, doc.title);
+                        println!("  {} {}", "todo", doc.title);
                     }
                     if args.stats {
                         tag_counts.count(&doc.tags);
@@ -119,7 +119,7 @@ async fn main() -> anyhow::Result<()> {
         }
     } else if args.stats {
         for (_, docs) in docs.iter() {
-            for (_, doc) in docs.iter() {
+            for doc in docs.iter() {
                 tag_counts.count(&doc.tags);
             }
         }
@@ -144,7 +144,7 @@ fn print_stats(all_tags: &AllTags, libraries: &Docs) {
 
     for (_path, docs) in libraries.iter() {
         titles_count += docs.len();
-        for (_id, doc) in docs.iter() {
+        for doc in docs.iter() {
             links_count += doc.tags.len();
         }
     }
