@@ -6,6 +6,7 @@ use std::ffi::OsStr;
 use std::fs::File;
 use std::io::{self, Write};
 use std::path::Path;
+use std::time;
 
 use memex::tag::query::*;
 use memex::tag::*;
@@ -52,12 +53,15 @@ type Docs = HashMap<String, Vec<Doc>>;
 
 #[tokio::main()]
 async fn main() -> anyhow::Result<()> {
+    let start = time::Instant::now();
     let args = Cli::init();
     // fail fast if we can't parse it
     let query = match args.query {
         Some(q) => Some(parse_query(&q)?),
         None => None,
     };
+    let parsing_t = start.elapsed();
+
     let mut output: Box<dyn Write> = match &args.output_file {
         None => {
             let stdout = io::stdout();
@@ -110,6 +114,7 @@ async fn main() -> anyhow::Result<()> {
         };
         docs.insert(library_path.clone(), new_docs);
     }
+    let load_t = start.elapsed();
 
     if args.stats {
         print_stats(&all_tags, &docs, &mut *output)?;
@@ -162,6 +167,16 @@ async fn main() -> anyhow::Result<()> {
             let tag = all_tags.name(*t).unwrap();
             writeln!(output, "{tag}: {ct}")?;
         }
+    }
+
+    if args.verbose {
+        let total_t = start.elapsed();
+        println!(
+            "parsing {}ms load {}ms total {}ms",
+            parsing_t.as_millis(),
+            load_t.as_millis(),
+            total_t.as_millis()
+        );
     }
 
     Ok(())
