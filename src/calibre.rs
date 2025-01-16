@@ -42,6 +42,7 @@ pub async fn load_docs(all_tags: &mut AllTags, library_path: &str) -> anyhow::Re
                 Doc {
                     title: title,
                     link: format!("calibre://show-book/{library_name}/{id}"),
+                    // https://manual.calibre-ebook.com/url_scheme.html#show-a-specific-book-in-calibre
                     tags: HashSet::new(),
                 },
             );
