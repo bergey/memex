@@ -20,17 +20,22 @@ memex '(and rust (not (or performance "memory safety")))'
 
 ## CLI arguments
 
-``` sh
+```
 $ memex --help
-Usage: memex [OPTIONS] <QUERY>
+enhanced search for Zotero & Calibre
+
+Usage: memex [OPTIONS] [QUERY]
 
 Arguments:
-  <QUERY>  
+  [QUERY]  
 
 Options:
+      --matches              print matching documents (default)
       --stats                print stats about library size
+      --top <TOP>            print stats on this many common tags [default: 5]
   -v, --verbose              print what we're doing
       --library <LIBRARIES>  path to library; suppresses default search locations
+  -o <OUTPUT_FILE>           output to file
   -h, --help                 Print help
   -V, --version              Print version
 ```
