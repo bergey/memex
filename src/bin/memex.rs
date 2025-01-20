@@ -2,12 +2,12 @@
 
 use clap::Parser;
 use std::collections::HashMap;
-use std::ffi::OsStr;
 use std::fs::File;
 use std::io::{self, Write};
 use std::path::Path;
 use std::time;
 
+use memex::format::*;
 use memex::tag::query::*;
 use memex::tag::*;
 use memex::Doc;
@@ -121,30 +121,24 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let mut tag_counts = memex::stats::TagCounts::new();
-    let is_org = args
+    let style: Style = args
         .output_file
-        .map_or(false, |path| path.extension() == Some(OsStr::new("org")));
+        .as_ref()
+        .map_or(Style::Stdout, |p| Style::from_path(&p));
 
     if let Some(query) = query {
         let query = query.compile(&mut all_tags);
+        style.header(&mut *output)?;
         for (path, docs) in docs.iter() {
             let mut first = true;
             for doc in docs.iter() {
                 if match_tags(&query, &doc.tags) {
                     if args.matches {
                         if first {
-                            if is_org {
-                                writeln!(output, "* {path}")?;
-                            } else {
-                                writeln!(output, "\n{path}")?;
-                            }
+                            style.library(path, &mut *output)?;
                             first = false;
                         }
-                        if is_org {
-                            writeln!(output, "- [[{}][{}]]", doc.link, doc.title)?;
-                        } else {
-                            writeln!(output, "  {}", doc.title)?;
-                        }
+                        style.doc(doc, &mut *output)?;
                     }
                     if args.stats {
                         tag_counts.count(&doc.tags);
@@ -152,6 +146,7 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
         }
+        style.footer(&mut *output)?;
     } else if args.stats {
         for (_, docs) in docs.iter() {
             for doc in docs.iter() {

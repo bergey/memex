@@ -1,8 +1,9 @@
 // pub mod note;
 pub mod calibre;
+pub mod format;
+pub mod stats;
 pub mod tag;
 pub mod zotero;
-pub mod stats;
 
 pub struct Doc {
     pub title: String,

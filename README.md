@@ -2,7 +2,7 @@
 
 Enhanced search for Zotero and Calibre.
 
-- not ()
+- not
 - or
 - only (has no tags besides those specified; need not have all of them)
 
@@ -38,4 +38,21 @@ Options:
   -o <OUTPUT_FILE>           output to file
   -h, --help                 Print help
   -V, --version              Print version
+```
+
+## application links
+
+If a file with `.html` extension is specified with `-o`, `memex` will write a link for each matching document.  the `zotero:` or `calibre:` links are registered with `xdg-open`, and will open the specified document in the appropriate application.  In most cases focus does not shift to the application.  This has only been tested on Linux so far.  
+
+### org-mode
+
+If the output file has a `.org` extension, `memex` will instead write an org-mode link.  org-mode can bbe configured to open these with `xdg-open`:
+
+``` elisp
+(defun org-link-set-xdg-open (scheme)
+  (org-link-set-parameters
+   scheme
+   :follow `(lambda (path) (browse-url-xdg-open (format "%s:%s" ,scheme path)))))
+(org-link-set-xdg-open "zotero")
+(org-link-set-xdg-open "calibre")
 ```
