@@ -1,0 +1,10 @@
+{
+    "build": {
+        "path_prefix": "memex"
+    },
+    "components": {
+        "artifacts": {
+            "cargo_dist": true
+        }
+    }
+}
