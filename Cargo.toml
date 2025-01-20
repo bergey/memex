@@ -1,7 +1,7 @@
 [package]
 name = "memex"
 description = "enhanced search for Zotero & Calibre"
-version = "0.1.0"
+version = "0.1.1"
 repository = "https://github.com/bergey/memex"
 edition = "2021"
 
