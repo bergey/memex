@@ -158,7 +158,8 @@ async fn main() -> anyhow::Result<()> {
     if args.stats {
         let mut tag_counts = tag_counts.to_vec();
         tag_counts.sort_by(|(_, a), (_, b)| b.cmp(a));
-        for (t, ct) in &tag_counts[..args.top] {
+        let bound = usize::min(args.top, tag_counts.len());
+        for (t, ct) in &tag_counts[..bound] {
             let tag = all_tags.name(*t).unwrap();
             writeln!(output, "{tag}: {ct}")?;
         }
