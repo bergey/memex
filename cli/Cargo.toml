@@ -13,8 +13,3 @@ glob = "0.3.2"
 sqlx = { version = "0.8.3", features = ["runtime-tokio", "sqlite"] }
 tokio = { version = "1.42.0", features = [ "rt-multi-thread", "macros" ] }
 winnow = "0.6.22"
-
-# The profile that 'dist' will build with
-[profile.dist]
-inherits = "release"
-lto = "thin"
