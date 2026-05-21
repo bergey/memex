@@ -1,0 +1,21 @@
+[workspace]
+members = ["client", "server", "cli"]
+default-members = ["client", "server"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+authors = ["Daniel Bergey"]
+
+[workspace.dependencies]
+automerge = "0.9.0"
+anyhow = "1.0.102"
+
+[profile.release]
+lto = true
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"

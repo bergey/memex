@@ -1,0 +1,34 @@
+default: (wasm "dev") serve
+
+serve:
+    PORT=8080 yarn parcel public/index.html
+
+wasm profile:
+    wasm-pack build --target web --out-dir {{wasm_dir}} --no-typescript --{{profile}} --no-pack
+
+parcel:
+    yarn parcel build public/index.html
+
+install path:
+    cp -r dist {{path}}
+
+websocket path='':
+    sed -e 's_"ws://localhost:3003/ws"_"{{path}}"_' public/main.js > public/copy.js
+    mv public/copy.js public/main.js
+
+test:
+    wasm-pack test --chrome
+
+clean:
+    rm -rf dist
+
+clean-all: clean
+    rm -rf {{wasm_dir}}
+    rm -rf .parcel-cache
+
+# allow preview before deploy
+dist: clean-all (wasm "release") (websocket "wss://api.cad.teallabs.org/ws") parcel
+
+austenite: clean (wasm "release") (websocket "austenite.spaceways.home/draft") parcel (install "/var/www/html")
+
+wasm_dir := ".wasm_pack"
