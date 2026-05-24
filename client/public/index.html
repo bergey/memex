@@ -1,15 +1,53 @@
 <!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8"/>
-        <title>Memex</title>
-        <meta name="theme-color" content="#2ba0a0" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-    </head>
+  <head>
+    <meta charset="UTF-8"/>
     <title>Memex</title>
-    <body>
+    <link href="../memex.css" rel="stylesheet">
+    <meta name="theme-color" content="#2ba0a0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <title>Memex</title>
+  <body>
+    <section id="search">
+      <h1>Search</h1>
+      <menu>
+        <li>Craft</li>
+        <li>Science</li>
+        <li>Society</li>
+        <li>Software</li>
+      </menu>
+    </section>
+    <section id="list">
+      <h1>List</h1>
       <p>
-        There should be a list of books / documents here.
+        There should be a table of books / documents here.
       </p>
-    </body>
+      <table>
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Author</th>
+          </tr>
+        </thead>
+        <tr>
+          <td>Principles of Model Checking</td>
+        </tr>
+        <tr class="selected">
+          <td>The Dawn of Everything</td>
+          <td>David Graeber</td>
+        </tr>
+      </table>
+    </section>
+    <section id="details">
+      <h1>Details</h1>
+      <ul>
+        <li><label>Title <input id=title type=text value="The Dawn of Everything" /></label></li>
+        <li><label>Author <input id=author type=text value="David Graeber" /></label></li>
+        <li><label>Date <input id=date type=text /></label></li>
+        <li><label>Publisher <input id=publisher type=text /></label></li>
+        <li><label>URL <input id=url type=text /></label></li>
+      </ul>
+    </section>
+  </body>
 </html>
