@@ -1,7 +1,7 @@
 default: (wasm "dev") serve
 
 serve:
-    PORT=8080 yarn parcel public/index.html
+    yarn parcel public/index.html
 
 wasm profile:
     wasm-pack build --target web --out-dir {{wasm_dir}} --no-typescript --{{profile}} --no-pack
