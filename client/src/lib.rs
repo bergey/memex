@@ -1,14 +1,22 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+mod prelude;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+use prelude::*;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+use log::{Level, info};
+use std::panic;
+use wasm_bindgen::{prelude::*};
+
+#[cfg(debug_assertions)]
+const LOG_LEVEL: Level = Level::Debug;
+
+#[cfg(not(debug_assertions))]
+const LOG_LEVEL: Level = Level::Info;
+
+#[wasm_bindgen]
+pub fn start(_server_ws_url: Option<String>) -> Result<()> {
+    panic::set_hook(Box::new(console_error_panic_hook::hook));
+    console_log::init_with_level(LOG_LEVEL).expect("failed to init logging");
+
+    info!("entered rust via webassembly");
+    Ok(())
 }
