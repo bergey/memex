@@ -1,30 +1,19 @@
+use leptos::html::*;
 use leptos::prelude::*;
 
 pub fn body() -> impl IntoView {
-    view! {
-        <Search />
-        <section id="list">
-        <table>
-            <thead>
-            <tr>
-                <th>Title</th>
-                <th>Author</th>
-            </tr>
-            </thead>
-            <tr>
-            <td>Principles of Model Checking</td>
-            </tr>
-            <tr class="selected">
-            <td>The Dawn of Everything</td>
-            <td>David Graeber</td>
-            </tr>
-        </table>
-        </section>
-        <Details />
-    }
+    (search(), list_section(), details())
 }
 
-fn Search() -> impl IntoView {
+fn list_section() -> impl IntoView {
+    section().id("list").child(table().child((
+        thead().child(tr().child((th().child("Title"),))),
+        tr().child((td().child("Principles of Model Checking"),)),
+        tr().child((td().child("The Dawn of Everything"),)),
+    )))
+}
+
+fn search() -> impl IntoView {
     view! {
         <section id="search">
             <h1>Search</h1>
@@ -38,7 +27,7 @@ fn Search() -> impl IntoView {
     }
 }
 
-fn Details() -> impl IntoView {
+fn details() -> impl IntoView {
     view! {
         <section id="details">
             <h1>Details</h1>
