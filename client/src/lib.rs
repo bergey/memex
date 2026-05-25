@@ -1,4 +1,5 @@
 mod prelude;
+mod render;
 
 use prelude::*;
 
@@ -18,5 +19,7 @@ pub fn start(_server_ws_url: Option<String>) -> Result<()> {
     console_log::init_with_level(LOG_LEVEL).expect("failed to init logging");
 
     info!("entered rust via webassembly");
+
+    let _ = leptos::mount::mount_to_body(render::body);
     Ok(())
 }
