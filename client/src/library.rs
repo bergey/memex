@@ -51,14 +51,14 @@ impl Library {
         })
     }
 
-    pub fn apply(&mut self, action: &Action) {
+    pub fn apply(&mut self, action: &Action<()>) {
         use action::Action::*;
         match action {
             SetName(name) => {
                 self.0.put(Root, "name", name).unwrap();
             }
 
-            AddRecord() => {
+            AddRecord(()) => {
                 let r_id = self.add_to_set(&self.records_id(), ObjType::Map);
                 // let r_id = self.0.insert_object(self.records_id(), 0, ObjType::Map).unwrap();
                 // consider hydrating from Record type
