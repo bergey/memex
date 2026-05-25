@@ -1,3 +1,4 @@
+mod library;
 mod prelude;
 mod render;
 
