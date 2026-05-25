@@ -19,6 +19,9 @@ pub fn start(_server_ws_url: Option<String>) -> Result<()> {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
     console_log::init_with_level(LOG_LEVEL).expect("failed to init logging");
 
+    // TODO load or create actor ID
+    // TODO load or create library
+
     info!("entered rust via webassembly");
 
     let _ = leptos::mount::mount_to_body(render::body);
