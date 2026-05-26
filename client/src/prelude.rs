@@ -1,5 +1,7 @@
 pub use anyhow::anyhow;
 use wasm_bindgen::prelude::*;
+#[allow(unused_imports)]
+pub use log::{debug, info, warn, error};
 
 #[derive(Debug)]
 pub struct Error(anyhow::Error);

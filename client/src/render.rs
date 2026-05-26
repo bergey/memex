@@ -1,7 +1,9 @@
 use crate::library::{action::Action, Apply, Library, LibraryRef, RecordId};
+use crate::prelude::*;
 
 use leptos::html::*;
 use leptos::prelude::*;
+use leptos::tachys::html::event;
 
 pub fn body(library_ref: LibraryRef) -> impl IntoView {
     let reactive = {
@@ -24,22 +26,24 @@ pub fn body(library_ref: LibraryRef) -> impl IntoView {
 fn list_section(library: ReactiveLibrary, library_ref: LibraryRef) -> impl IntoView {
     let mut library_add_button = library_ref.clone();
     section().id("list").child((
-        button().child("Add Record").onclick(move || {
-            library_add_button.apply(&Action::AddRecord(()));
-        }),
+        button()
+            .on(event::click, move |_| {
+                library_add_button.apply(&Action::AddRecord(()));
+            })
+            .child("Add Record"),
         table().child((
             thead().child(tr().child((th().child("Title"),))),
             For(ForProps {
                 each: move || library.records.get(),
                 key: |record| record.id.clone(),
-                children: {
-                    let library_ref = library_ref.clone();
-                    move |record| {
-                        tr().child((td().child(record.title.get()),)).onclick({
-                            let mut library_ref = library_ref.clone();
-                            move || library_ref.apply(&Action::DeleteRecord(record.id.clone()))
-                        })
-                    }
+                children: move |record| {
+                    // let mut library_ref = library_ref.clone();
+                    // let r_id = record.id.clone();
+                    tr().child((td().child(record.title.get()),))
+                    // .on(event::click, move |_| {
+                    //     // let mut library_ref = library_ref.clone();
+                    //     move || library_ref.apply(&Action::DeleteRecord(r_id));
+                    // })
                 },
             }),
         )),
@@ -110,6 +114,7 @@ impl ReactiveLibrary {
     }
 
     fn apply(&mut self, action: crate::library::action::Event) {
+        debug!("entering ReactiveLibrary::apply: {:?}", action);
         use crate::library::action::Action::*;
         match action {
             SetName(name) => {
@@ -123,7 +128,7 @@ impl ReactiveLibrary {
                         id: r_id,
                         title: RwSignal::new("".to_string()),
                     },
-                )
+                );
             }),
 
             SetTitle(r_id, title) => self.records.update(|rs| {
