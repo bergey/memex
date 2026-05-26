@@ -2,13 +2,14 @@ use super::RecordId;
 use crate::prelude::*;
 
 // add is () when starting an edit, (usize, ObjId) when finishing
-pub enum Action<Add> {
+#[derive(Debug)]
+pub enum Action<R> {
     SetName(String),
-    AddRecord(Add),
+    AddRecord(R),
     SetTitle(RecordId, String),
-    DeleteRecord(usize),
+    DeleteRecord(usize), // TODO move index lookup into Library::apply
 }
-pub type Event = Action<(usize, automerge::ObjId)>;
+pub type Event = Action<(usize, RecordId)>;
 
 impl Event {
     pub fn from_patch(patch: automerge::patches::Patch) -> Result<Self> {
@@ -36,7 +37,7 @@ impl Event {
                     ) if key == "title" => Ok(SetTitle(RecordId(patch.obj), value.to_string())),
                     (1, DeleteSeq { index, length: 1 }) => Ok(DeleteRecord(index)),
                     (1, Insert { index, values }) if values.len() == 1 => {
-                        Ok(AddRecord((index, values.iter().next().unwrap().1.clone())))
+                        Ok(AddRecord((index, RecordId(values.iter().next().unwrap().1.clone()))))
                     }
                     _ => Err(anyhow!("unknown action on records"))?,
                 },

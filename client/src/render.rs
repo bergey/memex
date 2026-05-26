@@ -1,16 +1,49 @@
+use crate::library::{action::Action, Apply, Library, LibraryRef, RecordId};
+
 use leptos::html::*;
 use leptos::prelude::*;
 
-pub fn body() -> impl IntoView {
-    (search(), list_section(), details())
+pub fn body(library_ref: LibraryRef) -> impl IntoView {
+    let reactive = {
+        let mut library = library_ref.lock().unwrap();
+        let reactive = ReactiveLibrary::from_replicated(&*library);
+        library.subscriber = {
+            let mut reactive = reactive.clone();
+            Box::new(move |ev| reactive.apply(ev))
+        };
+        reactive
+    };
+
+    (
+        search(),
+        list_section(reactive.clone(), library_ref),
+        details(reactive.selected),
+    )
 }
 
-fn list_section() -> impl IntoView {
-    section().id("list").child(table().child((
-        thead().child(tr().child((th().child("Title"),))),
-        tr().child((td().child("Principles of Model Checking"),)),
-        tr().child((td().child("The Dawn of Everything"),)),
-    )))
+fn list_section(library: ReactiveLibrary, library_ref: LibraryRef) -> impl IntoView {
+    let mut library_add_button = library_ref.clone();
+    section().id("list").child((
+        button().child("Add Record").onclick(move || {
+            library_add_button.apply(&Action::AddRecord(()));
+        }),
+        table().child((
+            thead().child(tr().child((th().child("Title"),))),
+            ForEnumerate(ForEnumerateProps {
+                each: move || library.records.get(),
+                key: |record| record.id.clone(),
+                children: {
+                    let library_ref = library_ref.clone();
+                    move |index: ReadSignal<usize>, record| {
+                        tr().child((td().child(record.title.get()),)).onclick({
+                            let mut library_ref = library_ref.clone();
+                            move || library_ref.apply(&Action::DeleteRecord(index.get()))
+                        })
+                    }
+                },
+            }),
+        )),
+    ))
 }
 
 fn search() -> impl IntoView {
@@ -27,7 +60,9 @@ fn search() -> impl IntoView {
     }
 }
 
-fn details() -> impl IntoView {
+fn details(_selected: RwSignal<Option<Record>>) -> impl IntoView {
+    // TODO update CRDT only on blur?  Accept lost edits if remove change comes through before blur
+    // someday if I build a history UI that suppors AM get_all / manual conflict resolution, consider flushing dirty fields
     view! {
         <section id="details">
             <h1>Details</h1>
@@ -39,5 +74,70 @@ fn details() -> impl IntoView {
                 <li><label>URL <input id="url" type="text" /></label></li>
             </ul>
         </section>
+    }
+}
+
+#[derive(Clone, Debug)]
+struct ReactiveLibrary {
+    name: RwSignal<String>,
+    records: RwSignal<Vec<Record>>, // Map RecordId Record ?  (removing ID from Record)
+    selected: RwSignal<Option<Record>>,
+}
+
+#[derive(Clone, Debug)]
+struct Record {
+    id: RecordId,
+    title: RwSignal<String>,
+}
+
+impl ReactiveLibrary {
+    fn from_replicated(library: &Library) -> ReactiveLibrary {
+        ReactiveLibrary {
+            name: RwSignal::new(library.name()),
+            selected: RwSignal::new(None),
+            records: RwSignal::new(
+                library
+                    .records()
+                    .map(|record| Record {
+                        // TODO extra clone here, because types don't reflect unique Library::Record
+                        // make Record &str instead
+                        id: record.id.clone(),
+                        title: RwSignal::new(record.title.clone()),
+                    })
+                    .collect(),
+            ),
+        }
+    }
+
+    fn apply(&mut self, action: crate::library::action::Event) {
+        use crate::library::action::Action::*;
+        match action {
+            SetName(name) => {
+                self.name.set(name);
+            }
+
+            AddRecord((ix, r_id)) => self.records.update(|rs| {
+                rs.insert(
+                    ix,
+                    Record {
+                        id: r_id,
+                        title: RwSignal::new("".to_string()),
+                    },
+                )
+            }),
+
+            SetTitle(r_id, title) => self.records.update(|rs| {
+                for r in rs {
+                    if r.id == r_id {
+                        r.title.set(title);
+                        break;
+                    }
+                }
+            }),
+
+            DeleteRecord(index) => self.records.update(|rs| {
+                rs.remove(index);
+            }),
+        }
     }
 }

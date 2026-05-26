@@ -1,6 +1,7 @@
 pub use anyhow::anyhow;
 use wasm_bindgen::prelude::*;
 
+#[derive(Debug)]
 pub struct Error(anyhow::Error);
 pub type Result<A> = std::result::Result<A, Error>;
 
