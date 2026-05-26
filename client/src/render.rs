@@ -29,15 +29,15 @@ fn list_section(library: ReactiveLibrary, library_ref: LibraryRef) -> impl IntoV
         }),
         table().child((
             thead().child(tr().child((th().child("Title"),))),
-            ForEnumerate(ForEnumerateProps {
+            For(ForProps {
                 each: move || library.records.get(),
                 key: |record| record.id.clone(),
                 children: {
                     let library_ref = library_ref.clone();
-                    move |index: ReadSignal<usize>, record| {
+                    move |record| {
                         tr().child((td().child(record.title.get()),)).onclick({
                             let mut library_ref = library_ref.clone();
-                            move || library_ref.apply(&Action::DeleteRecord(index.get()))
+                            move || library_ref.apply(&Action::DeleteRecord(record.id.clone()))
                         })
                     }
                 },

@@ -67,10 +67,11 @@ impl Library {
         self.replicated.insert_object(set_id, len, obj_type).unwrap()
     }
 
-    // delete by position seems racy.
-    // TODO ask automerge library devs if there's a better way
-    fn remove_from_set(&mut self, set_id: &ObjId, index: usize) {
-        self.replicated.splice(set_id, index, 1, std::iter::empty::<&str>()).unwrap();
+    fn remove_from_set(&mut self, set_id: &ObjId, item_id: &ObjId) {
+        let o_index = self.replicated.values(set_id).position(|(_, id)| id == *item_id);
+        if let Some(index) = o_index {
+            self.replicated.splice(set_id, index, 1, std::iter::empty::<&str>()).unwrap();
+        }
     }
 }
 
@@ -97,8 +98,8 @@ impl Apply for Library {
                 self.replicated.put(r_id, "title", title).unwrap();
             }
 
-            DeleteRecord(index) => {
-                self.remove_from_set(&self.records_id(), *index);
+            DeleteRecord(RecordId(item_id)) => {
+                self.remove_from_set(&self.records_id(), item_id);
             }
         }
 

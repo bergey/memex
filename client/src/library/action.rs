@@ -3,13 +3,13 @@ use crate::prelude::*;
 
 // add is () when starting an edit, (usize, ObjId) when finishing
 #[derive(Debug)]
-pub enum Action<R> {
+pub enum Action<AR = (), DR = RecordId> {
     SetName(String),
-    AddRecord(R),
+    AddRecord(AR),
     SetTitle(RecordId, String),
-    DeleteRecord(usize), // TODO move index lookup into Library::apply
+    DeleteRecord(DR), // TODO move index lookup into Library::apply
 }
-pub type Event = Action<(usize, RecordId)>;
+pub type Event = Action<(usize, RecordId), usize>;
 
 impl Event {
     pub fn from_patch(patch: automerge::patches::Patch) -> Result<Self> {
