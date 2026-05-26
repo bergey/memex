@@ -26,7 +26,8 @@ impl Event {
             }
         } else {
             match &patch.path[0].1 {
-                automerge::Prop::Map(k) if k == "records" => match (patch.path.len(), patch.action) {
+                automerge::Prop::Map(k) if k == "records" => match (patch.path.len(), patch.action)
+                {
                     (
                         2,
                         PutMap {
@@ -34,11 +35,15 @@ impl Event {
                             value: (value, _),
                             ..
                         },
-                    ) if key == "title" => Ok(SetTitle(RecordId(patch.obj), value.to_string())),
+                    ) => match (key.as_ref(), value.into_string()) {
+                        ("title", Ok(s)) => Ok(SetTitle(RecordId(patch.obj), s)),
+                        _ => Err(anyhow!("unknown action on a record"))?,
+                    },
                     (1, DeleteSeq { index, length: 1 }) => Ok(DeleteRecord(index)),
-                    (1, Insert { index, values }) if values.len() == 1 => {
-                        Ok(AddRecord((index, RecordId(values.iter().next().unwrap().1.clone()))))
-                    }
+                    (1, Insert { index, values }) if values.len() == 1 => Ok(AddRecord((
+                        index,
+                        RecordId(values.iter().next().unwrap().1.clone()),
+                    ))),
                     _ => Err(anyhow!("unknown action on records"))?,
                 },
                 _ => Err(anyhow!("unknown key on root of library"))?,
