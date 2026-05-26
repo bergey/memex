@@ -37,13 +37,12 @@ fn list_section(library: ReactiveLibrary, library_ref: LibraryRef) -> impl IntoV
                 each: move || library.records.get(),
                 key: |record| record.id.clone(),
                 children: move |record| {
-                    // let mut library_ref = library_ref.clone();
-                    // let r_id = record.id.clone();
-                    tr().child((td().child(record.title.get()),))
-                    // .on(event::click, move |_| {
-                    //     // let mut library_ref = library_ref.clone();
-                    //     move || library_ref.apply(&Action::DeleteRecord(r_id));
-                    // })
+                    let mut library_ref = library_ref.clone();
+                    let r_id = record.id.clone();
+                    tr().on(event::click, move |ev| {
+                        library_ref.apply(&Action::DeleteRecord(r_id.clone()));
+                    })
+                    .child((td().child(record.title.get()),))
                 },
             }),
         )),
