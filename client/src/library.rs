@@ -21,6 +21,7 @@ pub type LibraryRef = Arc<Mutex<Library>>;
 pub struct Record {
     pub id: RecordId,
     pub title: String,
+    pub author: String,
 }
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub struct RecordId(ObjId);
@@ -54,10 +55,12 @@ impl Library {
     pub fn records(&self) -> impl Iterator<Item = Record> {
         self.replicated.values(self.records_id()).map(|(_val, r_id)| {
             let (title, _) = self.replicated.get(&r_id, "title").unwrap().expect("record has title");
+            let (author, _) = self.replicated.get(&r_id, "author").unwrap().expect("record has author");
 
             Record {
                 id: RecordId(r_id),
                 title: title.into_string().expect("title is a string"),
+                author: author.into_string().expect("author is a string"),
             }
         })
     }
@@ -96,6 +99,10 @@ impl Apply for Library {
 
             SetTitle(RecordId(r_id), title) => {
                 self.replicated.put(r_id, "title", title).unwrap();
+            }
+
+            SetAuthor(RecordId(r_id), author) => {
+                self.replicated.put(r_id, "author", author).unwrap();
             }
 
             DeleteRecord(RecordId(item_id)) => {

@@ -7,6 +7,7 @@ pub enum Action<AR = (), DR = RecordId> {
     SetName(String),
     AddRecord(AR),
     SetTitle(RecordId, String),
+    SetAuthor(RecordId, String),
     DeleteRecord(DR), // TODO move index lookup into Library::apply
 }
 pub type Event = Action<(usize, RecordId), usize>;
@@ -37,6 +38,7 @@ impl Event {
                         },
                     ) => match (key.as_ref(), value.into_string()) {
                         ("title", Ok(s)) => Ok(SetTitle(RecordId(patch.obj), s)),
+                        ("author", Ok(s)) => Ok(SetAuthor(RecordId(patch.obj), s)),
                         _ => Err(anyhow!("unknown action on a record"))?,
                     },
                     (1, DeleteSeq { index, length: 1 }) => Ok(DeleteRecord(index)),

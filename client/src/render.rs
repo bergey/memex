@@ -32,7 +32,7 @@ fn list_section(library: ReactiveLibrary, library_ref: LibraryRef) -> impl IntoV
             })
             .child("Add Record"),
         table().child((
-            thead().child(tr().child((th().child("Title"),))),
+            thead().child(tr().child((th().child("Title"), th().child("Author")))),
             For(ForProps {
                 each: move || library.records.get(),
                 key: |record| record.id.clone(),
@@ -44,7 +44,10 @@ fn list_section(library: ReactiveLibrary, library_ref: LibraryRef) -> impl IntoV
                             library.selected.set(Some(record.clone()));
                         }
                     })
-                    .child((td().child(move || record.title.get()),))
+                    .child((
+                        td().child(move || record.title.get()),
+                        td().child(move || record.author.get()),
+                    ))
                 },
             }),
         )),
@@ -81,16 +84,33 @@ fn details(library_ref: LibraryRef, selected: RwSignal<Option<Record>>) -> impl 
                                 input()
                                     .id("title")
                                     .bind(leptos::attr::Value, selected.title),
-                            )) // value(selected.title.get()))),
+                            ))
+                            .on(event::change, {
+                                let mut library_ref = library_ref.clone();
+                                let selected = selected.clone();
+                                move |_| {
+                                    library_ref.apply(&Action::SetTitle(
+                                        selected.id.clone(),
+                                        selected.title.get(),
+                                    ));
+                                }
+                            }),
+                    ),
+                    li().child(
+                        label()
+                            .child((
+                                "Author",
+                                input()
+                                    .id("author")
+                                    .bind(leptos::attr::Value, selected.author),
+                            )) // value(selected.author.get()))),
                             .on(event::change, move |_| {
-                                debug!("left title");
-                                library_ref.apply(&Action::SetTitle(
+                                library_ref.apply(&Action::SetAuthor(
                                     selected.id.clone(),
-                                    selected.title.get(),
+                                    selected.author.get(),
                                 ));
                             }),
                     ),
-                    // <li><label>Author <input id="author" type="text" value="David Graeber" /></label></li>
                     // <li><label>Date <input id="date" type="text" /></label></li>
                     // <li><label>Publisher <input id="publisher" type="text" /></label></li>
                     // <li><label>URL <input id="url" type="text" /></label></li>
@@ -116,6 +136,7 @@ struct ReactiveLibrary {
 struct Record {
     id: RecordId,
     title: RwSignal<String>,
+    author: RwSignal<String>,
 }
 
 impl ReactiveLibrary {
@@ -131,6 +152,7 @@ impl ReactiveLibrary {
                         // make Record &str instead
                         id: record.id.clone(),
                         title: RwSignal::new(record.title.clone()),
+                        author: RwSignal::new(record.author.clone()),
                     })
                     .collect(),
             ),
@@ -151,6 +173,7 @@ impl ReactiveLibrary {
                     Record {
                         id: r_id,
                         title: RwSignal::new("".to_string()),
+                        author: RwSignal::new("".to_string()),
                     },
                 );
             }),
@@ -159,6 +182,15 @@ impl ReactiveLibrary {
                 for r in rs {
                     if r.id == r_id {
                         r.title.set(title);
+                        break;
+                    }
+                }
+            }),
+
+            SetAuthor(r_id, author) => self.records.update(|rs| {
+                for r in rs {
+                    if r.id == r_id {
+                        r.author.set(author);
                         break;
                     }
                 }
