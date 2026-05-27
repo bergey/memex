@@ -22,9 +22,6 @@ pub fn start(_server_ws_url: Option<String>) -> Result<()> {
 
     // TODO load or create library
     let library = library::Library::new();
-    // TODO load or create actor ID
-    // let actor_id = automerge::ActorId::random();
-    // library.set_actor(actor_id);
     let library_ref = Arc::new(Mutex::new(library));
 
     let _ = leptos::mount::mount_to_body(move || render::body(library_ref));

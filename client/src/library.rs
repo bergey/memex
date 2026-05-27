@@ -1,4 +1,6 @@
 pub mod action;
+mod actor;
+mod disk;
 
 use action::*;
 // use crate::prelude::*;
@@ -28,7 +30,9 @@ pub struct RecordId(ObjId);
 
 impl Library {
     pub fn new() -> Self {
+        let actor_id = actor::local_actor_id().unwrap();
         let mut am = AutoCommit::new();
+        am.set_actor(actor_id);
         am.put(Root, "name", "My Library").unwrap();
         am.put_object(Root, "records", ObjType::List).unwrap();
         am.update_diff_cursor(); // subscriber should never receive the changes above
@@ -110,6 +114,7 @@ impl Apply for Library {
             }
         }
 
+        self.save();
         let patches = self.replicated.diff_incremental();
         for p in patches {
             (self.subscriber)(Event::from_patch(p).unwrap());
