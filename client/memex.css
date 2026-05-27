@@ -49,3 +49,7 @@ tr.selected {
     list-style: none;
     padding: 0;
 }
+
+input {
+    margin-inline-start: 1em;
+}

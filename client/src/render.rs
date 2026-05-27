@@ -18,8 +18,8 @@ pub fn body(library_ref: LibraryRef) -> impl IntoView {
 
     (
         search(),
-        list_section(reactive.clone(), library_ref),
-        details(reactive.selected),
+        list_section(reactive.clone(), library_ref.clone()),
+        details(library_ref, reactive.selected),
     )
 }
 
@@ -37,12 +37,14 @@ fn list_section(library: ReactiveLibrary, library_ref: LibraryRef) -> impl IntoV
                 each: move || library.records.get(),
                 key: |record| record.id.clone(),
                 children: move |record| {
-                    let mut library_ref = library_ref.clone();
-                    let r_id = record.id.clone();
-                    tr().on(event::click, move |ev| {
-                        library_ref.apply(&Action::DeleteRecord(r_id.clone()));
+                    let library = library.clone();
+                    tr().on(event::click, {
+                        let record = record.clone();
+                        move |_| {
+                            library.selected.set(Some(record.clone()));
+                        }
                     })
-                    .child((td().child(record.title.get()),))
+                    .child((td().child(move || record.title.get()),))
                 },
             }),
         )),
@@ -63,20 +65,43 @@ fn search() -> impl IntoView {
     }
 }
 
-fn details(_selected: RwSignal<Option<Record>>) -> impl IntoView {
-    // TODO update CRDT only on blur?  Accept lost edits if remove change comes through before blur
+fn details(library_ref: LibraryRef, selected: RwSignal<Option<Record>>) -> impl IntoView {
+    // update CRDT only on blur.  Accept lost edits if remove change comes through before blur
     // someday if I build a history UI that suppors AM get_all / manual conflict resolution, consider flushing dirty fields
-    view! {
-        <section id="details">
-            <h1>Details</h1>
-            <ul>
-                <li><label>Title <input id="title" type="text" value="The Dawn of Everything" /></label></li>
-                <li><label>Author <input id="author" type="text" value="David Graeber" /></label></li>
-                <li><label>Date <input id="date" type="text" /></label></li>
-                <li><label>Publisher <input id="publisher" type="text" /></label></li>
-                <li><label>URL <input id="url" type="text" /></label></li>
-            </ul>
-        </section>
+    move || {
+        let mut library_ref = library_ref.clone();
+        if let Some(selected) = selected.read().clone() {
+            section()
+                .id("details")
+                .child((ul().child((
+                    li().child(
+                        label()
+                            .child((
+                                "Title",
+                                input()
+                                    .id("title")
+                                    .bind(leptos::attr::Value, selected.title),
+                            )) // value(selected.title.get()))),
+                            .on(event::change, move |_| {
+                                debug!("left title");
+                                library_ref.apply(&Action::SetTitle(
+                                    selected.id.clone(),
+                                    selected.title.get(),
+                                ));
+                            }),
+                    ),
+                    // <li><label>Author <input id="author" type="text" value="David Graeber" /></label></li>
+                    // <li><label>Date <input id="date" type="text" /></label></li>
+                    // <li><label>Publisher <input id="publisher" type="text" /></label></li>
+                    // <li><label>URL <input id="url" type="text" /></label></li>
+                )),))
+                .into_any()
+        } else {
+            section()
+                .id("details")
+                .child((h1().child("Details"),))
+                .into_any()
+        }
     }
 }
 
