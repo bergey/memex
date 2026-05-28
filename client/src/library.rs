@@ -2,10 +2,12 @@ pub mod action;
 mod actor;
 mod disk;
 
+use crate::prelude::*;
 use action::*;
-// use crate::prelude::*;
 
-use automerge::{self, AutoCommit, ReadDoc, ObjId, ObjId::Root, ObjType, transaction::Transactable};
+use automerge::{
+    self, AutoCommit, ObjId, ObjId::Root, ObjType, Patch, ReadDoc, transaction::Transactable,
+};
 use std::sync::{Arc, Mutex};
 
 /// for now, it only makes sense to have one Library
@@ -36,15 +38,23 @@ impl Library {
         am.put(Root, "name", "My Library").unwrap();
         am.put_object(Root, "records", ObjType::List).unwrap();
         am.update_diff_cursor(); // subscriber should never receive the changes above
+        Self::from_replicated(am)
+    }
+
+    fn from_replicated(replicated: AutoCommit) -> Self {
         Library {
-            replicated: am,
+            replicated,
             subscriber: Box::new(|_| {}),
             counter: 0,
         }
     }
 
     pub fn name(&self) -> String {
-        let (name, _) = self.replicated.get(Root, "name").unwrap().expect("library has name");
+        let (name, _) = self
+            .replicated
+            .get(Root, "name")
+            .unwrap()
+            .expect("library has name");
         name.into_string().expect("name is a string")
     }
 
@@ -57,27 +67,46 @@ impl Library {
     }
 
     pub fn records(&self) -> impl Iterator<Item = Record> {
-        self.replicated.values(self.records_id()).map(|(_val, r_id)| {
-            let (title, _) = self.replicated.get(&r_id, "title").unwrap().expect("record has title");
-            let (author, _) = self.replicated.get(&r_id, "author").unwrap().expect("record has author");
+        self.replicated
+            .values(self.records_id())
+            .map(|(_val, r_id)| {
+                let (title, _) = self
+                    .replicated
+                    .get(&r_id, "title")
+                    .log_error()
+                    .flatten()
+                    .expect("record has title");
+                let (author, _) = self
+                    .replicated
+                    .get(&r_id, "author")
+                    .log_error()
+                    .flatten()
+                    .expect("record has author");
 
-            Record {
-                id: RecordId(r_id),
-                title: title.into_string().expect("title is a string"),
-                author: author.into_string().expect("author is a string"),
-            }
-        })
+                Record {
+                    id: RecordId(r_id),
+                    title: title.into_string().expect("title is a string"),
+                    author: author.into_string().expect("author is a string"),
+                }
+            })
     }
 
     fn add_to_set(&mut self, set_id: &ObjId, obj_type: ObjType) -> ObjId {
         let len = self.replicated.length(set_id);
-        self.replicated.insert_object(set_id, len, obj_type).unwrap()
+        self.replicated
+            .insert_object(set_id, len, obj_type)
+            .unwrap()
     }
 
     fn remove_from_set(&mut self, set_id: &ObjId, item_id: &ObjId) {
-        let o_index = self.replicated.values(set_id).position(|(_, id)| id == *item_id);
+        let o_index = self
+            .replicated
+            .values(set_id)
+            .position(|(_, id)| id == *item_id);
         if let Some(index) = o_index {
-            self.replicated.splice(set_id, index, 1, std::iter::empty::<&str>()).unwrap();
+            self.replicated
+                .splice(set_id, index, 1, std::iter::empty::<&str>())
+                .unwrap();
         }
     }
 }
