@@ -1,5 +1,5 @@
 use super::RecordId;
-use crate::prelude::*;
+use anyhow::{anyhow, Result};
 
 // add is () when starting an edit, (usize, ObjId) when finishing
 #[derive(Clone, Debug)]

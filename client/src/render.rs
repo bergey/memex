@@ -1,6 +1,6 @@
-use crate::library::{
+use memex_shared::library::{
     Library, RecordId,
-    action::Action,
+    action::{Action, Event},
 };
 use crate::prelude::*;
 
@@ -157,9 +157,9 @@ impl ReactiveLibrary {
         }
     }
 
-    pub fn apply(&mut self, action: crate::library::action::Event) {
+    pub fn apply(&mut self, action: Event) {
         debug!("entering ReactiveLibrary::apply: {:?}", action);
-        use crate::library::action::Action::*;
+        use memex_shared::library::action::Action::*;
         match action {
             SetName(name) => {
                 self.name.set(name);

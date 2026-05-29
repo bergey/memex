@@ -8,6 +8,7 @@ authors.workspace = true
 crate-type = ["cdylib"]
 
 [dependencies]
+memex-shared = { path = "../memex-shared" }
 anyhow.workspace = true
 automerge.workspace = true
 console_error_panic_hook = "0.1.7"
@@ -20,6 +21,7 @@ leptos = { version = "0.8.19", features = ["csr"] }
 wasm-bindgen-futures = "0.4.72"
 indexed_db_futures = { version = "0.6.4", features = ["typed-arrays"] }
 futures = "0.3.32"
+tracing = "0.1.44"
 
 [dependencies.web-sys]
 version = "0.3.98"

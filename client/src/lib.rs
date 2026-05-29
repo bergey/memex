@@ -1,8 +1,9 @@
-mod library;
 mod prelude;
 mod render;
+mod actor;
+mod disk;
 
-use crate::library::action::{Action, Event};
+use memex_shared::library::{action::{Action, Event}, Library};
 use prelude::*;
 
 use log::Level;
@@ -27,7 +28,7 @@ pub fn start(_server_ws_url: Option<String>) -> Result<()> {
     let mut tx_e = Sender::new(tx_e);
 
     spawn_local((async move || {
-        let mut library = library::Library::load("my_library").await;
+        let mut library = disk::load_library("my_library").await;
         let reactive = render::ReactiveLibrary::from_replicated(&library);
         let mut reactive_for_updates = reactive.clone();
 
@@ -45,6 +46,7 @@ pub fn start(_server_ws_url: Option<String>) -> Result<()> {
                 match rx_a.recv().await {
                     Ok(event) => {
                         let patches = library.apply(&event);
+                        disk::save_library(&mut library);
                         for p in patches {
                             tx_e.send(p);
                         }

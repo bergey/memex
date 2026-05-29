@@ -1,20 +1,16 @@
 pub mod action;
-mod actor;
-mod disk;
 
-use crate::prelude::*;
+use crate::errors::LogResult;
 use action::*;
 
 use automerge::{
-    self, AutoCommit, ObjId, ObjId::Root, ObjType, Patch, ReadDoc, transaction::Transactable,
+    self, ActorId, AutoCommit, ObjId, ObjId::Root, ObjType, ReadDoc, transaction::Transactable,
 };
 
 /// for now, it only makes sense to have one Library
 /// in future, it will be possible for several users to share a Library, so useful for one User to have / belong to several Libraries
 pub struct Library {
-    replicated: AutoCommit,
-    // events: mpsc::SyncSender<action::Event>,
-    counter: u64, // temporary hack to distinguish new records
+    pub replicated: AutoCommit,
 }
 
 /// a Record may be a book, paper, movie, whatever
@@ -28,8 +24,7 @@ pub struct Record {
 pub struct RecordId(ObjId);
 
 impl Library {
-    pub fn new() -> Self {
-        let actor_id = actor::local_actor_id().unwrap();
+    pub fn new(actor_id: ActorId) -> Self {
         let mut am = AutoCommit::new();
         am.set_actor(actor_id);
         am.put(Root, "name", "My Library").unwrap();
@@ -38,10 +33,9 @@ impl Library {
         Self::from_replicated(am)
     }
 
-    fn from_replicated(replicated: AutoCommit) -> Self {
+    pub fn from_replicated(replicated: AutoCommit) -> Self {
         Library {
             replicated,
-            counter: 0,
         }
     }
 
@@ -119,9 +113,8 @@ impl Library {
                 let r_id = self.add_to_set(&self.records_id(), ObjType::Map);
                 // consider hydrating from Record type
                 self.replicated
-                    .put(r_id.clone(), "title", self.counter.to_string())
+                    .put(r_id.clone(), "title", "".to_string())
                     .unwrap();
-                self.counter += 1;
                 self.replicated.put(r_id, "author", "".to_string()).unwrap();
             }
 
@@ -138,7 +131,6 @@ impl Library {
             }
         }
 
-        self.save();
         self.replicated
             .diff_incremental()
             .into_iter()
