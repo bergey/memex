@@ -8,4 +8,5 @@ authors.workspace = true
 anyhow.workspace = true
 automerge.workspace = true
 log = "0.4.30"
+proptest = "1.11.0"
 tracing = "0.1.44"

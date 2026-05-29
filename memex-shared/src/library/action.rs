@@ -64,6 +64,7 @@ pub mod tests {
     use crate::library::Library;
     use Action::*;
     use automerge::ActorId;
+    use proptest::prelude::*;
 
     #[test]
     fn set_name() {
@@ -78,16 +79,25 @@ pub mod tests {
         let mut lib = Library::new(ActorId::random());
         lib.apply(&AddRecord(()));
         assert_eq!(lib.records().collect::<Vec<_>>().len(), 1);
-    } 
+    }
 
     #[test]
     fn set_title() {
-        let t ="my title".to_string();
+        let t = "my title".to_string();
         let mut lib = Library::new(ActorId::random());
         lib.apply(&AddRecord(()));
         let first = lib.records().next().unwrap();
         lib.apply(&SetTitle(first.id, t.clone()));
         let after = lib.records().next().unwrap();
         assert_eq!(after.title, t);
-    } 
+    }
+
+    proptest! {
+        #[test]
+        fn set_any_name(n in "\\PC*") {
+          let mut lib = Library::new(ActorId::random());
+          lib.apply(&SetName(n.clone()));
+          assert_eq!(lib.name(), n);
+        }
+    }
 }
