@@ -72,17 +72,19 @@ impl Library {
                     .log_error()
                     .flatten()
                     .expect("record has title");
-                let (author, _) = self
+                let author = self
                     .replicated
                     .get(&r_id, "author")
                     .log_error()
                     .flatten()
-                    .expect("record has author");
+                    .map(|a| a.0.into_string().ok())
+                    .flatten()
+                    .unwrap_or_else(|| "".to_string());
 
                 Record {
                     id: RecordId(r_id),
                     title: title.into_string().expect("title is a string"),
-                    author: author.into_string().expect("author is a string"),
+                    author: author,
                 }
             })
     }
