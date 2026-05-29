@@ -139,6 +139,10 @@ impl Library {
         }
 
         self.save();
-        self.replicated.diff_incremental().into_iter().filter_map(|p|Event::from_patch(p).log_error()).collect()
+        self.replicated
+            .diff_incremental()
+            .into_iter()
+            .filter_map(|p| Event::from_patch(p).log_error())
+            .collect()
     }
 }
