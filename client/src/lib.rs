@@ -35,7 +35,7 @@ pub fn start(_server_ws_url: Option<String>) -> Result<()> {
             loop {
                 match rx_e.recv().await {
                     Ok(action) => reactive_for_updates.apply(action),
-                    Err(_) => break,
+                    Err(_) => break, // TODO should raise a JS exception, reload the page or something
                 }
             }
         });
@@ -49,7 +49,7 @@ pub fn start(_server_ws_url: Option<String>) -> Result<()> {
                             tx_e.send(p);
                         }
                     }
-                    Err(_) => break,
+                    Err(_) => break, // TODO should raise a JS exception, reload the page or something
                 }
             }
         });

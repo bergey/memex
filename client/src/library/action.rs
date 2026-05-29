@@ -8,7 +8,7 @@ pub enum Action<AR = (), DR = RecordId> {
     AddRecord(AR),
     SetTitle(RecordId, String),
     SetAuthor(RecordId, String),
-    DeleteRecord(DR), // TODO move index lookup into Library::apply
+    DeleteRecord(DR),
 }
 pub type Event = Action<(usize, RecordId), usize>;
 

@@ -22,7 +22,6 @@ impl Library {
             .await
             .log_error()
             .and_then(|x| {
-                debug!("{:?}\n{:?}", x.js_typeof(), x);
                 x.dyn_into().map_err(|_| "dyn_into failed").log_error()
             })
             .map(|array: Uint8Array| array.to_vec())
