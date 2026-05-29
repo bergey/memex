@@ -2,7 +2,7 @@ use super::RecordId;
 use crate::prelude::*;
 
 // add is () when starting an edit, (usize, ObjId) when finishing
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Action<AR = (), DR = RecordId> {
     SetName(String),
     AddRecord(AR),

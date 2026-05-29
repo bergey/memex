@@ -8,17 +8,14 @@ use action::*;
 use automerge::{
     self, AutoCommit, ObjId, ObjId::Root, ObjType, Patch, ReadDoc, transaction::Transactable,
 };
-use std::sync::{Arc, Mutex};
 
 /// for now, it only makes sense to have one Library
 /// in future, it will be possible for several users to share a Library, so useful for one User to have / belong to several Libraries
 pub struct Library {
     replicated: AutoCommit,
-    pub subscriber: Box<dyn FnMut(Event) + Send>,
+    // events: mpsc::SyncSender<action::Event>,
     counter: u64, // temporary hack to distinguish new records
 }
-
-pub type LibraryRef = Arc<Mutex<Library>>;
 
 /// a Record may be a book, paper, movie, whatever
 // TODO &str instead of owned Strings
@@ -44,7 +41,6 @@ impl Library {
     fn from_replicated(replicated: AutoCommit) -> Self {
         Library {
             replicated,
-            subscriber: Box::new(|_| {}),
             counter: 0,
         }
     }
@@ -109,14 +105,8 @@ impl Library {
                 .unwrap();
         }
     }
-}
 
-pub trait Apply {
-    fn apply(&mut self, action: &Action<()>);
-}
-
-impl Apply for Library {
-    fn apply(&mut self, action: &Action<()>) {
+    pub fn apply(&mut self, action: &Action<()>) -> Vec<Event> {
         use action::Action::*;
         match action {
             SetName(name) => {
@@ -126,8 +116,11 @@ impl Apply for Library {
             AddRecord(()) => {
                 let r_id = self.add_to_set(&self.records_id(), ObjType::Map);
                 // consider hydrating from Record type
-                self.replicated.put(r_id, "title", self.counter.to_string()).unwrap();
+                self.replicated
+                    .put(r_id.clone(), "title", self.counter.to_string())
+                    .unwrap();
                 self.counter += 1;
+                self.replicated.put(r_id, "author", "".to_string()).unwrap();
             }
 
             SetTitle(RecordId(r_id), title) => {
@@ -144,16 +137,6 @@ impl Apply for Library {
         }
 
         self.save();
-        let patches = self.replicated.diff_incremental();
-        for p in patches {
-            (self.subscriber)(Event::from_patch(p).unwrap());
-        }
-    }
-} 
-
-impl Apply for Arc<Mutex<Library>> {
-    fn apply(&mut self, action: &Action<()>) {
-        let mut library = self.lock().unwrap();
-        library.apply(action);
+        self.replicated.diff_incremental().into_iter().filter_map(|p|Event::from_patch(p).log_error()).collect()
     }
 }

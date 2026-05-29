@@ -1,34 +1,30 @@
-use crate::library::{action::Action, Apply, Library, LibraryRef, RecordId};
+use crate::library::{
+    Library, RecordId,
+    action::Action,
+};
 use crate::prelude::*;
 
 use leptos::html::*;
 use leptos::prelude::*;
 use leptos::tachys::html::event;
 
-pub fn body(library_ref: LibraryRef) -> impl IntoView {
-    let reactive = {
-        let mut library = library_ref.lock().unwrap();
-        let reactive = ReactiveLibrary::from_replicated(&*library);
-        library.subscriber = {
-            let mut reactive = reactive.clone();
-            Box::new(move |ev| reactive.apply(ev))
-        };
-        reactive
-    };
-
+pub fn body(
+    reactive: ReactiveLibrary,
+    tx: Sender<Action>,
+) -> impl IntoView {
     (
         search(),
-        list_section(reactive.clone(), library_ref.clone()),
-        details(library_ref, reactive.selected),
+        list_section(reactive.clone(), tx.clone()),
+        details(tx, reactive.selected),
     )
 }
 
-fn list_section(library: ReactiveLibrary, library_ref: LibraryRef) -> impl IntoView {
-    let mut library_add_button = library_ref.clone();
+fn list_section(library: ReactiveLibrary, tx: Sender<Action>) -> impl IntoView {
+    let mut library_add_button = tx.clone();
     section().id("list").child((
         button()
             .on(event::click, move |_| {
-                library_add_button.apply(&Action::AddRecord(()));
+                library_add_button.send(Action::AddRecord(()));
             })
             .child("Add Record"),
         table().child((
@@ -68,11 +64,10 @@ fn search() -> impl IntoView {
     }
 }
 
-fn details(library_ref: LibraryRef, selected: RwSignal<Option<Record>>) -> impl IntoView {
+fn details(tx: Sender<Action>, selected: RwSignal<Option<Record>>) -> impl IntoView {
     // update CRDT only on blur.  Accept lost edits if remove change comes through before blur
     // someday if I build a history UI that suppors AM get_all / manual conflict resolution, consider flushing dirty fields
     move || {
-        let mut library_ref = library_ref.clone();
         if let Some(selected) = selected.read().clone() {
             section()
                 .id("details")
@@ -86,10 +81,10 @@ fn details(library_ref: LibraryRef, selected: RwSignal<Option<Record>>) -> impl 
                                     .bind(leptos::attr::Value, selected.title),
                             ))
                             .on(event::change, {
-                                let mut library_ref = library_ref.clone();
+                                let mut tx = tx.clone();
                                 let selected = selected.clone();
                                 move |_| {
-                                    library_ref.apply(&Action::SetTitle(
+                                    tx.send(Action::SetTitle(
                                         selected.id.clone(),
                                         selected.title.get(),
                                     ));
@@ -104,11 +99,14 @@ fn details(library_ref: LibraryRef, selected: RwSignal<Option<Record>>) -> impl 
                                     .id("author")
                                     .bind(leptos::attr::Value, selected.author),
                             )) // value(selected.author.get()))),
-                            .on(event::change, move |_| {
-                                library_ref.apply(&Action::SetAuthor(
-                                    selected.id.clone(),
-                                    selected.author.get(),
-                                ));
+                            .on(event::change, {
+                                let mut tx = tx.clone();
+                                move |_| {
+                                    tx.send(Action::SetAuthor(
+                                        selected.id.clone(),
+                                        selected.author.get(),
+                                    ));
+                                }
                             }),
                     ),
                     // <li><label>Date <input id="date" type="text" /></label></li>
@@ -126,7 +124,7 @@ fn details(library_ref: LibraryRef, selected: RwSignal<Option<Record>>) -> impl 
 }
 
 #[derive(Clone, Debug)]
-struct ReactiveLibrary {
+pub struct ReactiveLibrary {
     name: RwSignal<String>,
     records: RwSignal<Vec<Record>>, // Map RecordId Record ?  (removing ID from Record)
     selected: RwSignal<Option<Record>>,
@@ -140,7 +138,7 @@ struct Record {
 }
 
 impl ReactiveLibrary {
-    fn from_replicated(library: &Library) -> ReactiveLibrary {
+    pub fn from_replicated(library: &Library) -> ReactiveLibrary {
         ReactiveLibrary {
             name: RwSignal::new(library.name()),
             selected: RwSignal::new(None),
@@ -159,7 +157,7 @@ impl ReactiveLibrary {
         }
     }
 
-    fn apply(&mut self, action: crate::library::action::Event) {
+    pub fn apply(&mut self, action: crate::library::action::Event) {
         debug!("entering ReactiveLibrary::apply: {:?}", action);
         use crate::library::action::Action::*;
         match action {
