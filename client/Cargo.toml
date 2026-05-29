@@ -19,6 +19,7 @@ js-sys = "0.3.99"
 leptos = { version = "0.8.19", features = ["csr"] }
 wasm-bindgen-futures = "0.4.72"
 indexed_db_futures = { version = "0.6.4", features = ["typed-arrays"] }
+futures = "0.3.32"
 
 [dependencies.web-sys]
 version = "0.3.98"

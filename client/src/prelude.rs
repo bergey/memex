@@ -3,7 +3,7 @@ pub use anyhow::anyhow;
 pub use log::{debug, error, info, warn};
 use std::fmt::{Debug, Display};
 use wasm_bindgen::prelude::*;
-use std::sync::mpsc;
+use futures::channel::mpsc;
 
 #[derive(Debug)]
 pub struct MemexError(anyhow::Error);
@@ -44,18 +44,17 @@ impl<T: Into<anyhow::Error>> From<T> for MemexError {
 }
 
 #[derive(Clone, Debug)]
-pub struct Sender<T>(mpsc::SyncSender<T>);
+pub struct Sender<T>(mpsc::Sender<T>);
 
 impl<T: Debug> Sender<T> {
-    pub fn new(inner: mpsc::SyncSender<T>) -> Self {
+    pub fn new(inner: mpsc::Sender<T>) -> Self {
         Sender(inner)
     }
 
     pub fn send(&mut self, value: T) {
         match self.0.try_send(value) {
             Ok(_) => {},
-            Err(mpsc::TrySendError::Full(val)) => warn!("failed to enqueue message: {:?}", val),
-            Err(mpsc::TrySendError::Disconnected(_)) => error!("queue is disconnected, reload the page")
+            Err(e) => warn!("failed to enqueue message: {}", e),
         }
     }
 }

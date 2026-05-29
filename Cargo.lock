@@ -430,6 +430,7 @@ dependencies = [
  "automerge",
  "console_error_panic_hook",
  "console_log",
+ "futures",
  "getrandom 0.4.2",
  "indexed_db_futures",
  "js-sys",
