@@ -1,4 +1,4 @@
-use super::{Library};
+use super::Library;
 use crate::prelude::*;
 
 use automerge::AutoCommit;
@@ -28,7 +28,10 @@ impl Library {
             .map(|array: Uint8Array| array.to_vec())
             .and_then(|bytes: Vec<u8>| AutoCommit::load(bytes.as_ref()).log_error())
             // TODO validate schema
-            .map(Self::from_replicated)
+            .map(|mut am| {
+                am.update_diff_cursor();
+                Self::from_replicated(am)
+            })
             .unwrap_or_else(Library::new)
     }
 
