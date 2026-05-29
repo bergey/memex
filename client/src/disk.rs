@@ -7,7 +7,6 @@ use indexed_db_futures::OpenDbResult;
 use indexed_db_futures::database::Database;
 use indexed_db_futures::prelude::*;
 use indexed_db_futures::transaction::TransactionMode;
-// use indexed_db_futures::typed_array::TypedArray;
 use js_sys::Uint8Array;
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::spawn_local;
