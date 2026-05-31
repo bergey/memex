@@ -146,11 +146,9 @@ impl ReactiveLibrary {
                 library
                     .records()
                     .map(|record| Record {
-                        // TODO extra clone here, because types don't reflect unique Library::Record
-                        // make Record &str instead
-                        id: record.id.clone(),
-                        title: RwSignal::new(record.title.clone()),
-                        author: RwSignal::new(record.author.clone()),
+                        id: record.id,
+                        title: RwSignal::new(record.title),
+                        author: RwSignal::new(record.author),
                     })
                     .collect(),
             ),

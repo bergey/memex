@@ -14,7 +14,6 @@ pub struct Library {
 }
 
 /// a Record may be a book, paper, movie, whatever
-// TODO &str instead of owned Strings
 pub struct Record {
     pub id: RecordId,
     pub title: String,
