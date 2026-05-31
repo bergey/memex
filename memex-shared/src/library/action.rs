@@ -92,22 +92,52 @@ pub mod tests {
         assert_eq!(after.title, t);
     }
 
+    fn adds_and_deletes() -> impl Strategy<Value = Action<(), usize>> {
+        prop_oneof![
+            // For cases without data, `Just` is all you need
+            Just(AddRecord(())),
+            // For cases with data, write a strategy for the interior data, then
+            // map into the actual enum case.
+            any::<usize>().prop_map(DeleteRecord)
+        ]
+    }
+
     proptest! {
-        #[test]
-        fn set_any_name(n in "\\PC*") {
-          let mut lib = Library::new(ActorId::random());
-          lib.apply(&SetName(n.clone()));
-          assert_eq!(lib.name(), n);
-        }
+            #[test]
+            fn set_any_name(n in "\\PC*") {
+              let mut lib = Library::new(ActorId::random());
+              lib.apply(&SetName(n.clone()));
+              assert_eq!(lib.name(), n);
+            }
+
+            #[test]
+            fn delete_any_record(n in 1..=10usize, i in 0..10000usize) {
+                // use a large range for i so that the propability of i % n is nearly uniform
+                // without discarding test runs
+                let mut lib = Library::new(ActorId::random());
+                for _ in 0..n {
+                    lib.apply(&AddRecord(()));
+                }
+                let record_id = lib.records().map(|r| r.id).nth(i % n).unwrap();
+                lib.apply(&DeleteRecord(record_id));
+            }
 
         #[test]
-        fn delete_any_record(n in 1..=10usize, i in 0..10000usize) {
+        fn adds_and_deletes_seq(actions in prop::collection::vec(adds_and_deletes(), 1..30)) {
             let mut lib = Library::new(ActorId::random());
-            for _ in 0..n {
-                lib.apply(&AddRecord(()));
+            for a in actions {
+                let record_ids = lib.records().map(|r| r.id).collect::<Vec<_>>();
+                let act = match a {
+                    AddRecord(()) => AddRecord(()), // technically a different type
+                    DeleteRecord(i) => if record_ids.len() == 0 {
+                        AddRecord(())
+                    } else {
+                        DeleteRecord(record_ids[i % record_ids.len()].clone())
+                    },
+                    _ => panic!("not reachable with this generator"),
+                };
+                let _ = lib.apply(&act);
             }
-            let record_id = lib.records().map(|r| r.id).nth(i % n).unwrap();
-            lib.apply(&DeleteRecord(record_id));
         }
     }
 }
