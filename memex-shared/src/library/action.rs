@@ -99,5 +99,15 @@ pub mod tests {
           lib.apply(&SetName(n.clone()));
           assert_eq!(lib.name(), n);
         }
+
+        #[test]
+        fn delete_any_record(n in 1..=10usize, i in 0..10000usize) {
+            let mut lib = Library::new(ActorId::random());
+            for _ in 0..n {
+                lib.apply(&AddRecord(()));
+            }
+            let record_id = lib.records().map(|r| r.id).nth(i % n).unwrap();
+            lib.apply(&DeleteRecord(record_id));
+        }
     }
 }
