@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en" id="oranda" class="dark">
+  <head>
+    <title>My Oranda Project</title>
+    
+    
+      <link rel="icon" href="/memex/favicon.ico" />
+    
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="My Oranda Project" />
+    
+    
+    
+    <meta http-equiv="Permissions-Policy" content="interest-cohort=()" />
+    <link rel="stylesheet" href="/memex/oranda-v0.6.1.css" />
+    
+    
+  </head>
+  <body>
+    <div class="container">
+      <div class="page-body">
+        
+
+        <main>
+          <header>
+            
+            <h1 class="title">My Oranda Project</h1>
+            
+  <nav class="nav">
+    <ul>
+      <li><a href="/memex/">Home</a></li>
+
+      
+
+      
+        <li><a href="/memex/artifacts/">Install</a></li>
+      
+
+      
+
+      
+
+      
+    </ul>
+  </nav>
+
+          </header>
+
+          
+
+
+    <h1>memex</h1>
+<p>Enhanced search for Zotero and Calibre.</p>
+<ul>
+<li>not</li>
+<li>or</li>
+<li>only (has no tags besides those specified; need not have all of them)</li>
+</ul>
+<p>See the test suite for full syntax &amp; truth tables.  Here are some examples</p>
+<pre style="background-color:#263238;"><span style="color:#82aaff;">memex </span><span style="color:#89ddff;">'</span><span style="color:#c3e88d;">(not rust)</span><span style="color:#89ddff;">'
+</span><span style="color:#82aaff;">memex </span><span style="color:#89ddff;">'</span><span style="color:#c3e88d;">(only rust)</span><span style="color:#89ddff;">' </span><span style="font-style:italic;color:#546e7a;"># only rust or no tags
+</span><span style="color:#82aaff;">memex </span><span style="color:#89ddff;">'</span><span style="color:#c3e88d;">(and rust (only rust))</span><span style="color:#89ddff;">' </span><span style="font-style:italic;color:#546e7a;"># exactly one tag
+</span><span style="color:#82aaff;">memex </span><span style="color:#89ddff;">'</span><span style="color:#c3e88d;">(only rust concurrency crabs)</span><span style="color:#89ddff;">'
+</span><span style="color:#82aaff;">memex </span><span style="color:#89ddff;">'</span><span style="color:#c3e88d;">(and rust (not safety))</span><span style="color:#89ddff;">'
+</span><span style="color:#82aaff;">memex </span><span style="color:#89ddff;">'</span><span style="color:#c3e88d;">"memory safety"</span><span style="color:#89ddff;">' </span><span style="font-style:italic;color:#546e7a;"># quote tags with multiple words
+</span><span style="color:#82aaff;">memex </span><span style="color:#89ddff;">'</span><span style="color:#c3e88d;">(and rust (not (or performance "memory safety")))</span><span style="color:#89ddff;">'
+</span></pre>
+
+<h2>CLI arguments</h2>
+<pre style="background-color:#263238;"><span style="color:#eeffff;">$ memex --help
+</span><span style="color:#eeffff;">enhanced search for Zotero &amp; Calibre
+</span><span style="color:#eeffff;">
+</span><span style="color:#eeffff;">Usage: memex [OPTIONS] [QUERY]
+</span><span style="color:#eeffff;">
+</span><span style="color:#eeffff;">Arguments:
+</span><span style="color:#eeffff;">  [QUERY]  
+</span><span style="color:#eeffff;">
+</span><span style="color:#eeffff;">Options:
+</span><span style="color:#eeffff;">      --matches              print matching documents (default)
+</span><span style="color:#eeffff;">      --stats                print stats about library size
+</span><span style="color:#eeffff;">      --top &lt;TOP&gt;            print stats on this many common tags [default: 5]
+</span><span style="color:#eeffff;">  -v, --verbose              print what we're doing
+</span><span style="color:#eeffff;">      --library &lt;LIBRARIES&gt;  path to library; suppresses default search locations
+</span><span style="color:#eeffff;">  -o &lt;OUTPUT_FILE&gt;           output to file
+</span><span style="color:#eeffff;">  -h, --help                 Print help
+</span><span style="color:#eeffff;">  -V, --version              Print version
+</span></pre>
+
+<h2>application links</h2>
+<p>If a file with <code>.html</code> extension is specified with <code>-o</code>, <code>memex</code> will write a link for each matching document.  the <code>zotero:</code> or <code>calibre:</code> links are registered with <code>xdg-open</code>, and will open the specified document in the appropriate application.  In most cases focus does not shift to the application.  This has only been tested on Linux so far.</p>
+<h3>org-mode</h3>
+<p>If the output file has a <code>.org</code> extension, <code>memex</code> will instead write an org-mode link.  org-mode can bbe configured to open these with <code>xdg-open</code>:</p>
+<pre style="background-color:#263238;"><span style="color:#eeffff;">(defun org-link-set-xdg-open (scheme)
+</span><span style="color:#eeffff;">  (org-link-set-parameters
+</span><span style="color:#eeffff;">   scheme
+</span><span style="color:#eeffff;">   :follow `(lambda (path) (browse-url-xdg-open (format "%s:%s" ,scheme path)))))
+</span><span style="color:#eeffff;">(org-link-set-xdg-open "zotero")
+</span><span style="color:#eeffff;">(org-link-set-xdg-open "calibre")
+</span></pre>
+
+
+
+
+        </main>
+      </div>
+
+      <footer>
+        
+        <span>
+          My Oranda Project
+        </span>
+      </footer>
+    </div>
+
+    
+    
+
+    
+
+
+  </body>
+</html>
