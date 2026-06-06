@@ -7,7 +7,7 @@ authors.workspace = true
 [dependencies]
 anyhow.workspace = true
 automerge.workspace = true
-axum = "0.8.9"
+axum = { version = "0.8.9", features = ["ws"] }
 prometheus = "0.14.0"
 sqlx = { version = "0.8.6", features = ["postgres", "runtime-tokio", "tls-rustls", "bigdecimal"] }
 tokio = { version = "1.52.3", features = ["full"] }

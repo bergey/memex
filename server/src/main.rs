@@ -3,10 +3,36 @@ mod prelude;
 
 use prelude::*;
 
-use axum::extract::State;
-use axum::{Router, routing::get};
+use axum::{
+    Router,
+    extract::{
+        State,
+        ws::{self, WebSocket, WebSocketUpgrade},
+    },
+    response::Response,
+    routing::get,
+};
 use sqlx::postgres::PgPoolOptions;
 // use tokio::try_join;
+
+async fn ws_upgrade(State(_database): Pools, ws: WebSocketUpgrade) -> Response {
+    ws.on_upgrade(|ws| echo(ws))
+}
+
+async fn echo(mut socket: WebSocket) {
+    loop {
+        let o_msg = socket.recv().await;
+        match o_msg {
+            Some(Ok(ws_msg)) => {
+                if let Err(e) = socket.send(ws_msg).await {
+                    error!("{e}");
+                    break;
+                }
+            }
+            _ => break,
+        }
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -21,14 +47,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let app = Router::new()
         .route("/", get(root))
+        .route("/ws", get(ws_upgrade))
         .with_state(connection_pools);
+    // TODO serve client code
 
+    // TODO env var
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
 
     axum::serve(listener, app).await?;
     Ok(())
 }
 
-pub async fn root(State(pools): Pools) -> Page {
+pub async fn root(State(_pools): Pools) -> Page {
     "memex placeholder".to_string().as_html()
 }

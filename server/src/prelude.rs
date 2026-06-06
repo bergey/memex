@@ -3,7 +3,7 @@ use axum::http::StatusCode;
 use axum::response::Html;
 use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
-use tracing::error;
+pub use tracing::*;
 
 pub type Pools = State<ConnectionPools>;
 
