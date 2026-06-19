@@ -32,9 +32,16 @@ impl<T: Into<anyhow::Error>> From<T> for MemexError {
 #[derive(Clone, Debug)]
 pub struct Sender<T>(mpsc::Sender<T>);
 
-impl<T: Debug> Sender<T> {
-    pub fn new(inner: mpsc::Sender<T>) -> Self {
+impl<T: Debug> From<mpsc::Sender<T>> for Sender<T> {
+    fn from(inner: mpsc::Sender<T>) -> Self {
         Sender(inner)
+    }
+}
+
+impl<T: Debug> Sender<T> {
+    pub fn new(capacity: usize) -> (Self, mpsc::Receiver<T>) {
+        let (tx, rx) = mpsc::channel(capacity);
+        (Sender(tx), rx)
     }
 
     pub fn send(&mut self, value: T) {

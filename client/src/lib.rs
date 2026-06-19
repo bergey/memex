@@ -1,14 +1,16 @@
-mod prelude;
-mod render;
 mod actor;
 mod disk;
+mod prelude;
+mod render;
+mod sync;
 
-use memex_shared::library::{action::{Action, Event}, Library};
+use automerge::sync as am;
+use memex_shared::library::action::{Action, Event};
 use prelude::*;
 
+use futures::channel::mpsc;
 use log::Level;
 use std::panic;
-use futures::channel::mpsc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 
@@ -19,19 +21,21 @@ const LOG_LEVEL: Level = Level::Debug;
 const LOG_LEVEL: Level = Level::Info;
 
 #[wasm_bindgen]
-pub fn start(_server_ws_url: Option<String>) -> Result<()> {
+pub fn start(server_ws_url: Option<String>) -> Result<()> {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
     console_log::init_with_level(LOG_LEVEL).expect("failed to init logging");
 
-    let (tx_a, mut rx_a) = mpsc::channel::<Action>(3);
-    let (tx_e, mut rx_e) = mpsc::channel::<Event>(3);
-    let mut tx_e = Sender::new(tx_e);
+    let (tx_a, mut rx_a) = Sender::new(3);
+    let (mut tx_e, mut rx_e) = Sender::new(3);
+    let (tx_up, mut rx_up) = Sender::new(3);
+    let (tx_down, mut rx_down) = Sender::new(10);
 
     spawn_local((async move || {
         let mut library = disk::load_library("my_library").await;
         let reactive = render::ReactiveLibrary::from_replicated(&library);
         let mut reactive_for_updates = reactive.clone();
 
+        // DOM updates
         spawn_local(async move {
             loop {
                 match rx_e.recv().await {
@@ -41,8 +45,10 @@ pub fn start(_server_ws_url: Option<String>) -> Result<()> {
             }
         });
 
+        // Library
         spawn_local(async move {
             loop {
+                // TODO rx_down
                 match rx_a.recv().await {
                     Ok(event) => {
                         let patches = library.apply(&event);
@@ -50,14 +56,26 @@ pub fn start(_server_ws_url: Option<String>) -> Result<()> {
                         for p in patches {
                             tx_e.send(p);
                         }
+                        // TODO tx_up
                     }
                     Err(_) => break, // TODO should raise a JS exception, reload the page or something
                 }
             }
         });
 
-        let _ =
-            leptos::mount::mount_to_body(move || render::body(reactive, Sender::new(tx_a)));
+        // Network
+        if let Some(ws_url) = server_ws_url {
+            let mut net = sync::ServerSync::new(&ws_url, tx_down);
+            spawn_local(async move {
+                net.connect();
+                loop {
+                    let msg = rx_up.recv().await.expect("_up channel closed");
+                    net.send(msg);
+                }
+            });
+        }
+
+        let _ = leptos::mount::mount_to_body(move || render::body(reactive, tx_a));
     })());
 
     Ok(())
