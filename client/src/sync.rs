@@ -29,6 +29,15 @@ pub enum WebsocketBackoff {
     Backoff(u32),
 }
 
+impl WebsocketBackoff {
+    pub fn is_not_connected(&self) -> bool {
+        match self {
+            WebsocketBackoff::Connected(_) => false,
+            WebsocketBackoff::Backoff(_) => true,
+        }
+    }
+}
+
 // exponential backoff with jitter;
 // uniform distribution between min_ms*2^exponent and min_ms*2^(exponent+1)
 fn exponential_backoff(min_ms: u32, exponent: u32, max_exponent: u32) -> i32 {
@@ -42,7 +51,8 @@ async fn sleep(delay_ms: i32) {
     let mut cb = |resolve: js_sys::Function, _reject: js_sys::Function| {
         web_sys::window()
             .unwrap()
-            .set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, delay_ms).unwrap();
+            .set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, delay_ms)
+            .unwrap();
     };
 
     let p = js_sys::Promise::new(&mut cb);
@@ -60,7 +70,7 @@ impl ServerSync {
             handle.connect().await;
             loop {
                 let msg = rx_up.recv().await.expect("_up channel closed");
-                handle.send(msg);
+                handle.send(msg).await;
             }
         });
 
@@ -80,39 +90,41 @@ impl ServerSync {
     }
 
     async fn connect(&mut self) {
-        match WebSocket::new(&self.url) {
-            Ok(ws) => {
-                ws.set_binary_type(web_sys::BinaryType::Arraybuffer);
-                ws.set_onmessage(Some(
-                    onmessage_callback(self.tx.clone()).as_ref().unchecked_ref(),
-                ));
-                self.ws = WebsocketBackoff::Connected(ws);
-                self.tx.send(Message::Connected)
-            }
-            Err(err) => {
-                warn!("could not open websocket: {:?}", err);
-                let exponent = match self.ws {
-                    WebsocketBackoff::Backoff(exponent) => {
-                        self.ws = WebsocketBackoff::Backoff(exponent + 1);
-                        exponent
-                    }
-                    WebsocketBackoff::Connected(_) => {
-                        self.ws = WebsocketBackoff::Backoff(1);
-                        0
-                    }
-                };
-                let timeout = exponential_backoff(500, exponent, 14);
-                sleep(timeout).await;
-                // TODO try again
+        while self.ws.is_not_connected() {
+            match WebSocket::new(&self.url) {
+                Ok(ws) => {
+                    ws.set_binary_type(web_sys::BinaryType::Arraybuffer);
+                    ws.set_onmessage(Some(
+                        onmessage_callback(self.tx.clone()).as_ref().unchecked_ref(),
+                    ));
+                    self.ws = WebsocketBackoff::Connected(ws);
+                    self.tx.send(Message::Connected);
+                }
+                Err(err) => {
+                    warn!("could not open websocket: {:?}", err);
+                    let exponent = match self.ws {
+                        WebsocketBackoff::Backoff(exponent) => {
+                            self.ws = WebsocketBackoff::Backoff(exponent + 1);
+                            exponent
+                        }
+                        WebsocketBackoff::Connected(_) => {
+                            self.ws = WebsocketBackoff::Backoff(1);
+                            0
+                        }
+                    };
+                    let timeout = exponential_backoff(500, exponent, 14);
+                    sleep(timeout).await;
+                }
             }
         }
     }
 
-    fn send(&mut self, message: am::Message) {
+    async fn send(&mut self, message: am::Message) {
         if let WebsocketBackoff::Connected(ws) = &self.ws {
             if ws.send_with_u8_array(&message.encode()).is_err() {
                 self.ws = WebsocketBackoff::Backoff(0);
                 self.tx.send(Message::Disconnected);
+                self.connect().await
             }
         }
     }
