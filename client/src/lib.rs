@@ -5,10 +5,11 @@ mod render;
 mod sync;
 
 use automerge::sync as am;
+use automerge::sync::SyncDoc;
 use memex_shared::library::action::{Action, Event};
 use prelude::*;
 
-use futures::channel::mpsc;
+use futures::{channel::mpsc, select};
 use log::Level;
 use std::panic;
 use wasm_bindgen::prelude::*;
@@ -27,7 +28,7 @@ pub fn start(server_ws_url: Option<String>) -> Result<()> {
 
     let (tx_a, mut rx_a) = Sender::new(3);
     let (mut tx_e, mut rx_e) = Sender::new(3);
-    let (tx_up, mut rx_up) = Sender::new(3);
+    let (mut tx_up, mut rx_up) = Sender::new(3);
     let (tx_down, mut rx_down) = Sender::new(10);
 
     spawn_local((async move || {
@@ -47,18 +48,34 @@ pub fn start(server_ws_url: Option<String>) -> Result<()> {
 
         // Library
         spawn_local(async move {
+            let mut sync_state = automerge::sync::State::new();
+            let mut connected = false;
             loop {
-                // TODO rx_down
-                match rx_a.recv().await {
-                    Ok(event) => {
-                        let patches = library.apply(&event);
-                        disk::save_library(&mut library);
-                        for p in patches {
-                            tx_e.send(p);
+                select! {
+                   r_action = rx_a.recv() => {
+                        let action = r_action.context("rx_action").unwrap();
+                       let patches = library.apply(&action);
+                       disk::save_library(&mut library);
+                       for p in patches {
+                           tx_e.send(p);
+                       }
+                       if let Some(message) = library.replicated.sync().generate_sync_message(&mut sync_state) {
+                           tx_up.send(message)
+                       }
+                   },
+                    r_down = rx_down.recv() => {
+                        use sync::Message::*;
+                        match r_down.context("rx_down").unwrap() {
+                            Connected => connected = true,
+                            Disconnected => connected = false,
+                            Automerge(message) => {
+                                library.replicated.sync().receive_sync_message(&mut sync_state, message).unwrap();
+                                for p in library.get_patches(){
+                                    tx_e.send(p);
+                                }
+                            }
                         }
-                        // TODO tx_up
                     }
-                    Err(_) => break, // TODO should raise a JS exception, reload the page or something
                 }
             }
         });

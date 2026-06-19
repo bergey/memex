@@ -129,11 +129,15 @@ impl Library {
                 self.remove_from_set(&self.records_id(), item_id);
             }
         }
+        self.get_patches()
+    }
 
+    pub fn get_patches(&mut self) -> Vec<Event> {
         self.replicated
             .diff_incremental()
             .into_iter()
             .filter_map(|p| Event::from_patch(p).log_error())
             .collect()
+
     }
 }
