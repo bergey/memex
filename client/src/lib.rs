@@ -4,12 +4,10 @@ mod prelude;
 mod render;
 mod sync;
 
-use automerge::sync as am;
 use automerge::sync::SyncDoc;
-use memex_shared::library::action::{Action, Event};
 use prelude::*;
 
-use futures::{channel::mpsc, select};
+use futures::select;
 use log::Level;
 use std::panic;
 use wasm_bindgen::prelude::*;
@@ -28,8 +26,15 @@ pub fn start(server_ws_url: Option<String>) -> Result<()> {
 
     let (tx_a, mut rx_a) = Sender::new(3);
     let (mut tx_e, mut rx_e) = Sender::new(3);
-    let (mut tx_up, mut rx_up) = Sender::new(3);
-    let (tx_down, mut rx_down) = Sender::new(10);
+
+    // Network
+    let (mut tx_up, mut rx_down) = if let Some(ws_url) = server_ws_url {
+        sync::ServerSync::start(&ws_url)
+    } else {
+        let (tx_up, _) = Sender::new(0);
+        let (_, rx_down) = Sender::new(0);
+        (tx_up, rx_down)
+    };
 
     spawn_local((async move || {
         let mut library = disk::load_library("my_library").await;
@@ -59,8 +64,10 @@ pub fn start(server_ws_url: Option<String>) -> Result<()> {
                        for p in patches {
                            tx_e.send(p);
                        }
-                       if let Some(message) = library.replicated.sync().generate_sync_message(&mut sync_state) {
-                           tx_up.send(message)
+                       if connected {
+                           if let Some(message) = library.replicated.sync().generate_sync_message(&mut sync_state) {
+                               tx_up.send(message)
+                           }
                        }
                    },
                     r_down = rx_down.recv() => {
@@ -79,18 +86,6 @@ pub fn start(server_ws_url: Option<String>) -> Result<()> {
                 }
             }
         });
-
-        // Network
-        if let Some(ws_url) = server_ws_url {
-            let mut net = sync::ServerSync::new(&ws_url, tx_down);
-            spawn_local(async move {
-                net.connect();
-                loop {
-                    let msg = rx_up.recv().await.expect("_up channel closed");
-                    net.send(msg);
-                }
-            });
-        }
 
         let _ = leptos::mount::mount_to_body(move || render::body(reactive, tx_a));
     })());

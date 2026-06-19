@@ -1,6 +1,8 @@
 use crate::prelude::*;
 use automerge::sync as am;
+use futures::channel::mpsc as channel;
 use wasm_bindgen::{JsCast, closure::Closure};
+use wasm_bindgen_futures::spawn_local;
 
 use web_sys::{MessageEvent, WebSocket};
 
@@ -18,7 +20,6 @@ pub enum Message {
 pub struct ServerSync {
     url: String,
     ws: WebsocketBackoff,
-    // rx: channel::Receiver<am::Message>,
     tx: Sender<Message>,
 }
 
@@ -41,7 +42,7 @@ async fn sleep(delay_ms: i32) {
     let mut cb = |resolve: js_sys::Function, _reject: js_sys::Function| {
         web_sys::window()
             .unwrap()
-            .set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, delay_ms);
+            .set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, delay_ms).unwrap();
     };
 
     let p = js_sys::Promise::new(&mut cb);
@@ -49,8 +50,24 @@ async fn sleep(delay_ms: i32) {
 }
 
 impl ServerSync {
-    // TODO should init connect?
-    pub fn new(
+    // spawns a long-lived task
+    pub fn start(url: &str) -> (Sender<am::Message>, channel::Receiver<Message>) {
+        let (tx_up, mut rx_up) = Sender::new(3);
+        let (tx_down, rx_down) = Sender::new(10);
+        let mut handle = Self::new(url, tx_down);
+
+        spawn_local(async move {
+            handle.connect().await;
+            loop {
+                let msg = rx_up.recv().await.expect("_up channel closed");
+                handle.send(msg);
+            }
+        });
+
+        (tx_up, rx_down)
+    }
+
+    fn new(
         url: &str,
         // rx: channel::Receiver<am::Message>,
         tx: Sender<Message>,
@@ -58,12 +75,11 @@ impl ServerSync {
         ServerSync {
             url: url.to_string(),
             ws: WebsocketBackoff::Backoff(0),
-            // rx,
             tx,
         }
     }
 
-    pub async fn connect(&mut self) {
+    async fn connect(&mut self) {
         match WebSocket::new(&self.url) {
             Ok(ws) => {
                 ws.set_binary_type(web_sys::BinaryType::Arraybuffer);
@@ -92,7 +108,7 @@ impl ServerSync {
         }
     }
 
-    pub fn send(&mut self, message: am::Message) {
+    fn send(&mut self, message: am::Message) {
         if let WebsocketBackoff::Connected(ws) = &self.ws {
             if ws.send_with_u8_array(&message.encode()).is_err() {
                 self.ws = WebsocketBackoff::Backoff(0);
@@ -108,7 +124,7 @@ fn onmessage_callback(mut tx: Sender<Message>) -> Closure<dyn FnMut(MessageEvent
     })
 }
 
-fn on_message_callback_inner(tx: &mut Sender<Message>, ev: MessageEvent) -> Option<()>{
+fn on_message_callback_inner(tx: &mut Sender<Message>, ev: MessageEvent) -> Option<()> {
     let abuf = ev.data().dyn_into::<js_sys::ArrayBuffer>().log_error()?;
     let vec = js_sys::Uint8Array::new(&abuf).to_vec();
     let message = am::Message::decode(vec.as_ref()).log_error()?;
