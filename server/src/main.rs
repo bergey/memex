@@ -51,8 +51,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .with_state(connection_pools);
     // TODO serve client code
 
-    // TODO env var
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
+    let addr = "0.0.0.0:3036"; // TODO env var
+    info!("memex listening on {}", addr);
+    let listener = tokio::net::TcpListener::bind(addr).await?;
 
     axum::serve(listener, app).await?;
     Ok(())
