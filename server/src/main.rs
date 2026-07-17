@@ -24,6 +24,7 @@ async fn echo(mut socket: WebSocket) {
         let o_msg = socket.recv().await;
         match o_msg {
             Some(Ok(ws_msg)) => {
+                debug!("{:?}", ws_msg);
                 if let Err(e) = socket.send(ws_msg).await {
                     error!("{e}");
                     break;
