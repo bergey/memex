@@ -61,7 +61,7 @@ async fn sleep(delay_ms: i32) {
 
 impl ServerSync {
     // spawns a long-lived task
-    pub fn start(url: &str) -> (Sender<am::Message>, channel::Receiver<Message>) {
+    pub fn start(url: String) -> (Sender<am::Message>, channel::Receiver<Message>) {
         let (tx_up, mut rx_up) = Sender::new(3);
         let (tx_down, rx_down) = Sender::new(10);
         let mut handle = Self::new(url, tx_down);
@@ -78,12 +78,12 @@ impl ServerSync {
     }
 
     fn new(
-        url: &str,
+        url: String,
         // rx: channel::Receiver<am::Message>,
         tx: Sender<Message>,
     ) -> Self {
         ServerSync {
-            url: url.to_string(),
+            url: url,
             ws: WebsocketBackoff::Backoff(0),
             tx,
         }

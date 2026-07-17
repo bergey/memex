@@ -29,7 +29,7 @@ pub fn start(server_ws_url: Option<String>) -> Result<()> {
 
     // Network
     let (mut tx_up, mut rx_down) = if let Some(ws_url) = server_ws_url {
-        sync::ServerSync::start(&ws_url)
+        sync::ServerSync::start(ws_url)
     } else {
         let (tx_up, _) = Sender::new(0);
         let (_, rx_down) = Sender::new(0);
