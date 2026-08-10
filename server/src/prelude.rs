@@ -1,6 +1,5 @@
 use axum::extract::State;
 use axum::http::StatusCode;
-use axum::response::Html;
 use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
 pub use tracing::*;
@@ -38,26 +37,3 @@ where
         }
     }
 }
-
-pub type Page = Result<Html<String>, Error>;
-
-pub trait AsHtml {
-    fn as_html(self) -> Page;
-}
-
-impl AsHtml for String {
-    fn as_html(self) -> Page {
-        Ok(Html::from(self))
-    }
-}
-
-pub fn unwrap_or_404<T>(opt: Option<T>) -> Result<T, Error> {
-    opt.ok_or(Error {
-        error: anyhow::anyhow!("unwrapped None to 404"),
-        status_code: StatusCode::NOT_FOUND,
-    })
-}
-
-// #[derive(Serialize, Deserialize, sqlx::Type, Clone, Copy)]
-// #[sqlx(transparent)]
-// pub struct RestaurantId(i32);
