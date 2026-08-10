@@ -23,8 +23,7 @@ use uuid::Uuid;
 #[macro_use]
 extern crate lazy_static;
 lazy_static! {
-    static ref BROADCAST: Sender<AutoCommit> =
-        broadcast::channel(1024).0;
+    static ref BROADCAST: Sender<AutoCommit> = broadcast::channel(1024).0;
 }
 
 async fn ws_upgrade(pools: Pools, ws: WebSocketUpgrade) -> Response {
@@ -51,6 +50,7 @@ async fn sync_crdt_ws(pools: Pools, mut socket: WebSocket) {
                         }
                         Ok(None) => {}
                         Ok(Some(reply)) => {
+                            info!("sending reply");
                             if let Err(e) = socket.send(reply).await {
                                 error!("in send: {e}");
                                 break;
@@ -59,11 +59,18 @@ async fn sync_crdt_ws(pools: Pools, mut socket: WebSocket) {
                     },
                 }
             },
-            Ok(mut doc) = other_clients.recv() => {
-                if let Some(reply) = doc.sync().generate_sync_message(&mut sync_state) {
-                    if let Err(e) = socket.send(ws::Message::Binary(reply.encode().into())).await {
-                        error!("in broadcast send: {e}");
-                        break;
+            Ok(doc) = other_clients.recv() => {
+                let mut doc = doc.clone();
+                let heads = doc.get_heads();
+                match doc.sync().generate_sync_message(&mut sync_state) {
+                    None => debug!( sync_state = ?sync_state, our_heads = ?heads, "not forwarding"),
+                    Some(reply) =>
+                    {
+                        info!("forwarding remote edit");
+                        if let Err(e) = socket.send(ws::Message::Binary(reply.encode().into())).await {
+                            error!("in broadcast send: {e}");
+                            break;
+                        }
                     }
                 }
             },
@@ -77,6 +84,7 @@ async fn save_message(
     sync_state: &mut automerge::sync::State,
     ws_msg: ws::Message,
 ) -> anyhow::Result<Option<ws::Message>> {
+    info!("received WS message");
     let message = decode_message(ws_msg)?;
     let id = Uuid::nil(); // TODO ID from message / history
     let mut transaction = database.postgres.begin().await?;

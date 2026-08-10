@@ -80,6 +80,12 @@ pub fn start(server_ws_url: Option<String>) -> Result<()> {
                                 for p in library.get_patches(){
                                     tx_e.send(p);
                                 }
+                                let heads = library.replicated.get_heads();
+                                if let Some(message) = library.replicated.sync().generate_sync_message(&mut sync_state) {
+                                    tx_up.send(message);
+                                } else {
+                                    info!( sync_state = ?sync_state, our_heads = ?heads, "no reply");
+                                }
                             }
                         }
                     }
