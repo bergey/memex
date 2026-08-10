@@ -1,6 +1,8 @@
+mod database;
 mod observability;
 mod prelude;
 
+use database::*;
 use prelude::*;
 
 use automerge::AutoCommit;
@@ -15,7 +17,7 @@ use axum::{
     routing::get,
 };
 use sqlx::postgres::PgPoolOptions;
-// use tokio::try_join;
+use uuid::Uuid;
 
 async fn ws_upgrade(pools: Pools, ws: WebSocketUpgrade) -> Response {
     ws.on_upgrade(|ws| sync_crdt_ws(pools, ws))
@@ -49,27 +51,28 @@ async fn sync_crdt_ws(pools: Pools, mut socket: WebSocket) {
     }
 }
 
-// TODO cache in memory, don't read on every edit
 async fn save_message(
-    State(_database): &Pools,
+    State(database): &Pools,
     sync_state: &mut automerge::sync::State,
     ws_msg: ws::Message,
 ) -> anyhow::Result<Option<ws::Message>> {
     let message = decode_message(ws_msg)?;
-    // let document = read_library(message.id)
-    //     .await?
-    //     .unwrap_or_else(|| AutoCommit::new());
-    let mut document = AutoCommit::new(); // TODO remove
-    document
-        .sync()
-        .receive_sync_message(sync_state, message)?;
-    Ok(None) // TODO reply?
+    let id = Uuid::nil(); // TODO ID from message / history
+    let mut transaction = database.postgres.begin().await?;
+    let mut document = read_library(&mut transaction, id)
+        .await?
+        .unwrap_or_else(|| AutoCommit::new());
+    document.sync().receive_sync_message(sync_state, message)?;
+    save_library(&mut transaction, id, &mut document).await?;
+    transaction.commit().await?;
+    let o_reply = document.sync().generate_sync_message(sync_state);
+    Ok(o_reply.map(|reply| ws::Message::Binary(reply.encode().into())))
 }
 
 fn decode_message(ws_msg: ws::Message) -> anyhow::Result<automerge::sync::Message> {
     match ws_msg {
         ws::Message::Binary(bytes) => Ok(automerge::sync::Message::decode(bytes.as_ref())?),
-        _ => Err(anyhow::anyhow!("expected binary WS message"))
+        _ => Err(anyhow::anyhow!("expected binary WS message")),
     }
 }
 
