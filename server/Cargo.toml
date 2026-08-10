@@ -10,7 +10,7 @@ automerge.workspace = true
 axum = { version = "0.8.9", features = ["ws"] }
 lazy_static = "1.5.0"
 prometheus = "0.14.0"
-sqlx = { version = "0.8.6", features = ["postgres", "runtime-tokio", "tls-rustls", "bigdecimal", "uuid"] }
+sqlx = { version = "0.9.0", features = ["postgres", "runtime-tokio", "tls-rustls", "bigdecimal", "uuid"] }
 tokio = { version = "1.52.3", features = ["full"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt", "json"] }
