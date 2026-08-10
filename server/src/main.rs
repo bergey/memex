@@ -17,7 +17,15 @@ use axum::{
     routing::get,
 };
 use sqlx::postgres::PgPoolOptions;
+use tokio::sync::broadcast::{self, Sender};
 use uuid::Uuid;
+
+#[macro_use]
+extern crate lazy_static;
+lazy_static! {
+    static ref BROADCAST: Sender<AutoCommit> =
+        broadcast::channel(1024).0;
+}
 
 async fn ws_upgrade(pools: Pools, ws: WebSocketUpgrade) -> Response {
     ws.on_upgrade(|ws| sync_crdt_ws(pools, ws))
@@ -25,28 +33,41 @@ async fn ws_upgrade(pools: Pools, ws: WebSocketUpgrade) -> Response {
 
 async fn sync_crdt_ws(pools: Pools, mut socket: WebSocket) {
     let mut sync_state = automerge::sync::State::new();
+    let mut other_clients = BROADCAST.subscribe();
 
     loop {
-        let o_msg = socket.recv().await;
-        match o_msg {
-            None => break, // client closed TODO metrics
-            Some(Err(e)) => {
-                error!("in recv: {e}");
-                break;
-            }
-            Some(Ok(ws_msg)) => match save_message(&pools, &mut sync_state, ws_msg).await {
-                Err(e) => {
-                    error!("{e}");
-                    break;
+        tokio::select! {
+            o_msg = socket.recv() => {
+                match o_msg {
+                    None => break, // client closed TODO metrics
+                    Some(Err(e)) => {
+                        error!("in recv: {e}");
+                        break;
+                    }
+                    Some(Ok(ws_msg)) => match save_message(&pools, &mut sync_state, ws_msg).await {
+                        Err(e) => {
+                            error!("{e}");
+                            break;
+                        }
+                        Ok(None) => {}
+                        Ok(Some(reply)) => {
+                            if let Err(e) = socket.send(reply).await {
+                                error!("in send: {e}");
+                                break;
+                            }
+                        }
+                    },
                 }
-                Ok(None) => {}
-                Ok(Some(reply)) => {
-                    if let Err(e) = socket.send(reply).await {
-                        error!("in send: {e}");
+            },
+            Ok(mut doc) = other_clients.recv() => {
+                if let Some(reply) = doc.sync().generate_sync_message(&mut sync_state) {
+                    if let Err(e) = socket.send(ws::Message::Binary(reply.encode().into())).await {
+                        error!("in broadcast send: {e}");
                         break;
                     }
                 }
             },
+            else => break
         }
     }
 }
@@ -65,6 +86,7 @@ async fn save_message(
     document.sync().receive_sync_message(sync_state, message)?;
     save_library(&mut transaction, id, &mut document).await?;
     transaction.commit().await?;
+    let _ = BROADCAST.send(document.clone());
     let o_reply = document.sync().generate_sync_message(sync_state);
     Ok(o_reply.map(|reply| ws::Message::Binary(reply.encode().into())))
 }
