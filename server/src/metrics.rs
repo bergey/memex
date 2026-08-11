@@ -1,5 +1,3 @@
-#[macro_use]
-extern crate lazy_static;
 use prometheus::{
     self, register_histogram, register_int_counter, register_int_gauge, Histogram, IntCounter,
     IntGauge,
@@ -34,6 +32,4 @@ lazy_static! {
     .unwrap();
     static ref WS_MESSAGE_LATENCY: Histogram =
         register_histogram!("ws_message", "server-side time to process one message").unwrap();
-    static ref BROADCAST: Sender<(DocumentType, DocumentId, Automerge)> =
-        broadcast::channel(1024).0;
 }
