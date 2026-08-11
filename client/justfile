@@ -2,7 +2,7 @@ default: (wasm "dev") parcel serve
 
 [working-directory: 'dist']
 serve:
-    python -m http.server
+    pnpm dlx http-server
 
 wasm profile:
     wasm-pack build --target web --out-dir {{wasm_dir}} --no-typescript --{{profile}} --no-pack
