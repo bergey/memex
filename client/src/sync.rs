@@ -94,9 +94,9 @@ impl ServerSync {
             match WebSocket::new(&self.url) {
                 Ok(ws) => {
                     ws.set_binary_type(web_sys::BinaryType::Arraybuffer);
-                    ws.set_onmessage(Some(
-                        onmessage_callback(self.tx.clone()).as_ref().unchecked_ref(),
-                    ));
+                    let cb = onmessage_callback(self.tx.clone());
+                    ws.set_onmessage(Some(cb.as_ref().unchecked_ref()));
+                    cb.forget();
                     self.ws = WebsocketBackoff::Connected(ws);
                     self.tx.send(Message::Connected);
                 }
