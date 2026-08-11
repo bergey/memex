@@ -18,7 +18,7 @@ impl super::ServerSync {
                     self.tx.send(Message::Connected);
                 }
                 Err(err) => {
-                    warn!("could not open websocket: {:?}", err);
+                    warn!(?err, "could not open websocket");
                     let exponent = match self.ws {
                         WebsocketBackoff::Backoff(exponent) => {
                             self.ws = WebsocketBackoff::Backoff(exponent + 1);

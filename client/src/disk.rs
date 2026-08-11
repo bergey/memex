@@ -68,7 +68,7 @@ async fn open_database() -> OpenDbResult<Database> {
     Database::open("memex")
         .with_version(3u8)
         .with_on_blocked(|event| {
-            error!("DB upgrade blocked: {:?}", event);
+            error!(?event, "DB upgrade blocked");
             Ok(())
         })
         .with_on_upgrade_needed(|event, db| {

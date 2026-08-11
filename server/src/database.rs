@@ -1,5 +1,3 @@
-use crate::prelude::*;
-
 use automerge::{
     AutoCommit,
     sync::{Message, SyncDoc},
@@ -13,7 +11,6 @@ pub async fn apply_message(
     sync_state: &mut automerge::sync::State,
     message: Message,
 ) -> anyhow::Result<AutoCommit> {
-    info!("received WS message");
     let mut transaction = database.begin().await?;
     let mut document = read_library(&mut transaction, id)
         .await?

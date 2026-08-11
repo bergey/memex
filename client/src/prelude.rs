@@ -48,7 +48,7 @@ impl<T: Debug> Sender<T> {
     pub fn send(&mut self, value: T) {
         match self.0.try_send(value) {
             Ok(_) => {},
-            Err(e) => warn!("failed to enqueue message: {}", e),
+            Err(cause) => warn!(?cause, "failed to enqueue message"),
         }
     }
 }

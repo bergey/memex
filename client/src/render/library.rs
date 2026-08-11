@@ -24,7 +24,7 @@ impl ReactiveLibrary {
     }
 
     pub fn apply(&mut self, action: Event) {
-        debug!("entering ReactiveLibrary::apply: {:?}", action);
+        debug!(?action, "entering ReactiveLibrary::apply");
         use memex_shared::library::action::Action::*;
         match action {
             SetName(name) => {
