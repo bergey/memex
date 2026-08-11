@@ -17,6 +17,11 @@ impl ReactiveLibrary {
                         id: record.id,
                         title: RwSignal::new(record.title),
                         author: RwSignal::new(record.author),
+                        url: RwSignal::new(record.url),
+                        typ: RwSignal::new(record.typ),
+                        date: RwSignal::new(record.date),
+                        date_added: RwSignal::new(record.date_added),
+                        read_last: RwSignal::new(record.read_last),
                     })
                     .collect(),
             ),
@@ -25,7 +30,7 @@ impl ReactiveLibrary {
 
     pub fn apply(&mut self, action: Event) {
         debug!(?action, "entering ReactiveLibrary::apply");
-        use memex_shared::library::action::Action::*;
+        use memex_shared::library::action::{Action::*, RecordField::*};
         match action {
             SetName(name) => {
                 self.name.set(name);
@@ -38,23 +43,27 @@ impl ReactiveLibrary {
                         id: r_id,
                         title: RwSignal::new("".to_string()),
                         author: RwSignal::new("".to_string()),
+                        url: RwSignal::new("".to_string()),
+                        typ: RwSignal::new("".to_string()),
+                        date: RwSignal::new(None),
+                        date_added: RwSignal::new(None),
+                        read_last: RwSignal::new(None),
                     },
                 );
             }),
 
-            SetTitle(r_id, title) => self.records.update(|rs| {
+            SetRecord(r_id, field) => self.records.update(|rs| {
                 for r in rs {
                     if r.id == r_id {
-                        r.title.set(title);
-                        break;
-                    }
-                }
-            }),
-
-            SetAuthor(r_id, author) => self.records.update(|rs| {
-                for r in rs {
-                    if r.id == r_id {
-                        r.author.set(author);
+                        match field {
+                            Title(v) => r.title.set(v),
+                            Author(v) => r.author.set(v),
+                            Url(v) => r.url.set(v),
+                            Type(v) => r.typ.set(v),
+                            Date(v) => r.date.set(Some(v)),
+                            DateAdded(v) => r.date_added.set(Some(v)),
+                            ReadLast(v) => r.read_last.set(Some(v)),
+                        }
                         break;
                     }
                 }

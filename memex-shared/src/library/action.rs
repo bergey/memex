@@ -1,4 +1,5 @@
 use super::RecordId;
+
 use anyhow::{Result, anyhow};
 
 // add is () when starting an edit, (usize, ObjId) when finishing
@@ -6,15 +7,26 @@ use anyhow::{Result, anyhow};
 pub enum Action<AR = (), DR = RecordId> {
     SetName(String),
     AddRecord(AR),
-    SetTitle(RecordId, String),
-    SetAuthor(RecordId, String),
+    SetRecord(RecordId, RecordField),
     DeleteRecord(DR),
+}
+
+#[derive(Clone, Debug)]
+pub enum RecordField {
+    Title(String),
+    Author(String),
+    Url(String),
+    Type(String), // TODO enum?
+    Date(i64), // seconds since 1970
+    DateAdded(i64),
+    ReadLast(i64),
 }
 pub type Event = Action<(usize, RecordId), usize>;
 
 impl Event {
     pub fn from_patch(patch: automerge::patches::Patch) -> Result<Self> {
         use Action::*;
+        use RecordField::*;
         use automerge::patches::PatchAction::*;
         if patch.path.len() == 0 {
             match patch.action {
@@ -36,10 +48,21 @@ impl Event {
                             value: (value, _),
                             ..
                         },
-                    ) => match (key.as_ref(), value.into_string()) {
-                        ("title", Ok(s)) => Ok(SetTitle(RecordId(patch.obj), s)),
-                        ("author", Ok(s)) => Ok(SetAuthor(RecordId(patch.obj), s)),
-                        _ => Err(anyhow!("unknown action on a record"))?,
+                    ) => {
+                        let o_field = match (key.as_ref(), value.to_i64(), value.into_string()) {
+                            ("title", _, Ok(s)) => Some(Title(s)),
+                            ("author", _, Ok(s)) => Some(Author(s)),
+                            ("url", _, Ok(s)) => Some(Url(s)),
+                            ("type", _, Ok(s)) => Some(Type(s)),
+                            ("date", Some(i), _) => Some(Date(i)),
+                            ("date_added", Some(i), _) => Some(DateAdded(i)),
+                            ("read_last", Some(i), _)  => Some(ReadLast(i)),
+                            _ => None
+                        };
+                        match o_field {
+                            Some(field) => Ok(SetRecord(RecordId(patch.obj), field)),
+                            None => Err(anyhow!("unknown action on a record"))?,
+                        }
                     },
                     (1, DeleteSeq { index, length: 1 }) => Ok(DeleteRecord(index)),
                     (1, Insert { index, values }) if values.len() == 1 => Ok(AddRecord((
@@ -63,6 +86,7 @@ pub mod tests {
     use super::*;
     use crate::library::Library;
     use Action::*;
+    use RecordField::*;
     use automerge::ActorId;
     use proptest::prelude::*;
 
@@ -87,7 +111,7 @@ pub mod tests {
         let mut lib = Library::new(ActorId::random());
         lib.apply(&AddRecord(()));
         let first = lib.records().next().unwrap();
-        lib.apply(&SetTitle(first.id, t.clone()));
+        lib.apply(&SetRecord(first.id, Title(t.clone())));
         let after = lib.records().next().unwrap();
         assert_eq!(after.title, t);
     }

@@ -37,9 +37,16 @@ pub struct ReactiveLibrary {
     selected: RwSignal<Option<Record>>,
 }
 
+// TODO decide whether leptos Stores are ready; eliminate this boilerplate
+// https://book.leptos.dev/view/04b_iteration.html#option-4-stores
 #[derive(Clone, Debug)]
 struct Record {
     id: RecordId,
     title: RwSignal<String>,
     author: RwSignal<String>,
+    url: RwSignal<String>,
+    typ: RwSignal<String>,
+    date: RwSignal<Option<i64>>,
+    date_added: RwSignal<Option<i64>>,
+    read_last: RwSignal<Option<i64>>,
 }

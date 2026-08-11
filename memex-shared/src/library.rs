@@ -18,6 +18,11 @@ pub struct Record {
     pub id: RecordId,
     pub title: String,
     pub author: String,
+    pub url: String,
+    pub typ: String,
+    pub date: Option<i64>,
+    pub date_added: Option<i64>,
+    pub read_last: Option<i64>,
 }
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub struct RecordId(ObjId);
@@ -33,9 +38,7 @@ impl Library {
     }
 
     pub fn from_replicated(replicated: AutoCommit) -> Self {
-        Library {
-            replicated,
-        }
+        Library { replicated }
     }
 
     pub fn name(&self) -> String {
@@ -59,25 +62,15 @@ impl Library {
         self.replicated
             .values(self.records_id())
             .map(|(_val, r_id)| {
-                let (title, _) = self
-                    .replicated
-                    .get(&r_id, "title")
-                    .log_error()
-                    .flatten()
-                    .expect("record has title");
-                let author = self
-                    .replicated
-                    .get(&r_id, "author")
-                    .log_error()
-                    .flatten()
-                    .map(|a| a.0.into_string().ok())
-                    .flatten()
-                    .unwrap_or_else(|| "".to_string());
-
                 Record {
+                    title: self.get_string(&r_id, "title"),
+                    author: self.get_string(&r_id, "author"),
+                    url: self.get_string(&r_id, "url"),
+                    typ: self.get_string(&r_id, "type"),
+                    date: self.get_i64(&r_id, "date"),
+                    date_added: self.get_i64(&r_id, "date_added"),
+                    read_last: self.get_i64(&r_id, "read_last"),
                     id: RecordId(r_id),
-                    title: title.into_string().expect("title is a string"),
-                    author: author,
                 }
             })
     }
@@ -117,12 +110,19 @@ impl Library {
                 self.replicated.put(r_id, "author", "".to_string()).unwrap();
             }
 
-            SetTitle(RecordId(r_id), title) => {
-                self.replicated.put(r_id, "title", title).unwrap();
-            }
-
-            SetAuthor(RecordId(r_id), author) => {
-                self.replicated.put(r_id, "author", author).unwrap();
+            SetRecord(RecordId(r_id), field) => {
+                use RecordField::*;
+                use automerge::ScalarValue::Timestamp;
+                let (prop, value): (&str, automerge::ScalarValue) = match field {
+                    Title(v) => ("title", v.into()),
+                    Author(v) => ("author", v.into()),
+                    Url(v) => ("url", v.into()),
+                    Type(v) => ("type", v.into()),
+                    Date(v) => ("date", Timestamp(*v)),
+                    DateAdded(v) => ("date_added", Timestamp(*v)),
+                    ReadLast(v) => ("read_last", Timestamp(*v)),
+                };
+                self.replicated.put(r_id, prop, value).unwrap();
             }
 
             DeleteRecord(RecordId(item_id)) => {
@@ -138,6 +138,23 @@ impl Library {
             .into_iter()
             .filter_map(|p| Event::from_patch(p).log_error())
             .collect()
+    }
 
+    fn get_string(&self, r_id: &ObjId, field: &str) -> String {
+        self.replicated
+            .get(&r_id, field)
+            .log_error()
+            .flatten()
+            .map(|a| a.0.into_string().ok())
+            .flatten()
+            .unwrap_or_else(|| "".to_string())
+    }
+
+    fn get_i64(&self, r_id: &ObjId, field: &str) -> Option<i64> {
+        self.replicated
+            .get(&r_id, field)
+            .log_error()
+            .flatten()
+            .and_then(|a| a.0.to_i64())
     }
 }

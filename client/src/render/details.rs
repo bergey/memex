@@ -1,5 +1,5 @@
 use super::Record;
-use memex_shared::library::action::Action;
+use memex_shared::library::action::{Action, RecordField};
 use crate::prelude::*;
 
 use leptos::html::*;
@@ -7,8 +7,8 @@ use leptos::prelude::*;
 use leptos::tachys::html::event;
 
 pub fn details(tx: Sender<Action>, selected: RwSignal<Option<Record>>) -> impl IntoView {
-    // update CRDT only on blur.  Accept lost edits if remove change comes through before blur
-    // someday if I build a history UI that suppors AM get_all / manual conflict resolution, consider flushing dirty fields
+    // update CRDT only on blur.  Accept lost edits if remote change comes through before blur
+    // someday if I build a history UI that supports AM get_all / manual conflict resolution, consider flushing dirty fields
     move || {
         if let Some(selected) = selected.read().clone() {
             section()
@@ -26,9 +26,9 @@ pub fn details(tx: Sender<Action>, selected: RwSignal<Option<Record>>) -> impl I
                                 let mut tx = tx.clone();
                                 let selected = selected.clone();
                                 move |_| {
-                                    tx.send(Action::SetTitle(
+                                    tx.send(Action::SetRecord(
                                         selected.id.clone(),
-                                        selected.title.get(),
+                                        RecordField::Title(selected.title.get()),
                                     ));
                                 }
                             }),
@@ -44,9 +44,9 @@ pub fn details(tx: Sender<Action>, selected: RwSignal<Option<Record>>) -> impl I
                             .on(event::change, {
                                 let mut tx = tx.clone();
                                 move |_| {
-                                    tx.send(Action::SetAuthor(
+                                    tx.send(Action::SetRecord(
                                         selected.id.clone(),
-                                        selected.author.get(),
+                                        RecordField::Author(selected.author.get()),
                                     ));
                                 }
                             }),
