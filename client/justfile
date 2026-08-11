@@ -1,7 +1,8 @@
-default: (wasm "dev") serve
+default: (wasm "dev") parcel serve
 
+[working-directory: 'dist']
 serve:
-    yarn parcel public/index.html
+    python -m http.server
 
 wasm profile:
     wasm-pack build --target web --out-dir {{wasm_dir}} --no-typescript --{{profile}} --no-pack
