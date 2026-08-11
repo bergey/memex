@@ -14,7 +14,7 @@ install path:
     cp -r dist {{path}}
 
 websocket path='':
-    sed -e 's_"ws://localhost:3003/ws"_"{{path}}"_' public/main.js > public/copy.js
+    sed -e 's_"ws://localhost:3036/ws"_"{{path}}"_' public/main.js > public/copy.js
     mv public/copy.js public/main.js
 
 test:
