@@ -8,7 +8,7 @@ wasm profile:
     wasm-pack build --target web --out-dir {{wasm_dir}} --no-typescript --{{profile}} --no-pack
 
 parcel:
-    yarn parcel build public/index.html
+    pnpm parcel build public/index.html
 
 install path:
     cp -r dist {{path}}
