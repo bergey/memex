@@ -32,7 +32,8 @@ pub fn start(server_ws_url: Option<String>) -> Result<()> {
         sync::ServerSync::start(ws_url)
     } else {
         let (tx_up, _) = Sender::new(0);
-        let (_, rx_down) = Sender::new(0);
+        let (rx_up, rx_down) = Sender::new(0);
+        std::mem::forget(rx_up);
         (tx_up, rx_down)
     };
 
