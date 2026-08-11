@@ -93,6 +93,7 @@ impl ServerSync {
         while self.ws.is_not_connected() {
             match WebSocket::new(&self.url) {
                 Ok(ws) => {
+                    info!("connected WS");
                     ws.set_binary_type(web_sys::BinaryType::Arraybuffer);
                     let cb = onmessage_callback(self.tx.clone());
                     ws.set_onmessage(Some(cb.as_ref().unchecked_ref()));
