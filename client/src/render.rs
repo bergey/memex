@@ -3,7 +3,7 @@ mod library;
 mod list;
 
 use crate::prelude::*;
-use memex_shared::library::{RecordId, action::Action, date::Date};
+use memex_shared::library::{RecordId, action::Action};
 
 use leptos::html::*;
 use leptos::prelude::*;
@@ -46,7 +46,7 @@ struct Record {
     author: RwSignal<String>,
     url: RwSignal<String>,
     typ: RwSignal<String>,
-    date: RwSignal<Date>,
-    date_added: RwSignal<Date>,
-    read_last: RwSignal<Date>,
+    date: RwSignal<String>,
+    date_added: RwSignal<String>,
+    read_last: RwSignal<String>,
 }

@@ -14,8 +14,8 @@ impl Date {
         }
     }
 
-    pub fn from_str(s: &str) -> Self {
-        let mut parts = s.split('-');
+    pub fn from_str<S: AsRef<str>>(s: S) -> Self {
+        let mut parts = s.as_ref().split('-');
         let y = parts.next().and_then(|y| y.parse::<i64>().ok());
         let m = parts.next().and_then(|m| m.parse::<u8>().ok()).unwrap_or(0);
         let d = parts.next().and_then(|m| m.parse::<u8>().ok()).unwrap_or(0);
@@ -106,7 +106,7 @@ pub mod tests {
         fn from_to_string(y in 1..3000i64, m in 0..12u8, d in 0..31u8) {
             let date = Date::from_parts(y, m, d);
             let s = date.to_string();
-            let parsed = Date::from_str(s.as_ref());
+            let parsed = Date::from_str(s);
             assert_eq!(parsed, date);
         }
     }

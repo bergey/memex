@@ -21,15 +21,7 @@ pub fn details(tx: Sender<Action>, selected: RwSignal<Option<Record>>) -> impl I
                 move |name: &'static str,
                       signal: RwSignal<String>,
                       action: &'static dyn Fn(String) -> RecordField| {
-                    field(
-                        tx.clone(),
-                        id.clone(),
-                        name,
-                        signal,
-                        action,
-                        |s| s.clone(),
-                        |s| s.to_owned(),
-                    )
+                    field(tx.clone(), id.clone(), name, signal, action, &identity)
                 }
             };
 
@@ -37,17 +29,9 @@ pub fn details(tx: Sender<Action>, selected: RwSignal<Option<Record>>) -> impl I
                 let tx = tx.clone();
                 let id = selected.id.clone();
                 move |name: &'static str,
-                      signal: RwSignal<Date>,
+                      signal: RwSignal<String>,
                       action: &'static dyn Fn(Date) -> RecordField| {
-                    field(
-                        tx.clone(),
-                        id.clone(),
-                        name,
-                        signal,
-                        action,
-                        Date::to_string,
-                        Date::from_str,
-                    )
+                    field(tx.clone(), id.clone(), name, signal, action, &Date::from_str)
                 }
             };
 
@@ -72,38 +56,31 @@ pub fn details(tx: Sender<Action>, selected: RwSignal<Option<Record>>) -> impl I
     }
 }
 
-fn field<T, F, G>(
+fn field<T>(
     tx: Sender<Action>,
     id: RecordId,
     name: &'static str,
-    field: RwSignal<T>,
+    field: RwSignal<String>,
+    // keep these separate rather than define a 'static fn for each RecordField constructor
     action: &'static dyn Fn(T) -> RecordField,
-    to_string: F,
-    from_string: G,
-) -> impl IntoView
-where
-    F: Fn(&T) -> String,
-    G: Fn(&str) -> T + 'static,
-    T: Sync + Send + Clone + 'static,
-{
-    let input_element: NodeRef<Input> = NodeRef::new();
-
+    from_string: &'static dyn Fn(String) -> T,
+) -> impl IntoView {
     li().child(
         label()
             .child((
                 name,
                 input()
                     .id(name) // TODO downcase_snake
-                    .value(to_string(&field.get()))
-                    .node_ref(input_element),
+                    .bind(leptos::attr::Value, field),
             ))
             .on(event::change, {
                 let mut tx = tx.clone();
                 let id = id.clone();
                 move |_| {
-                    let val = from_string(input_element.get().unwrap().value().as_ref());
-                    tx.send(Action::SetRecord(id.clone(), action(val)));
+                    tx.send(Action::SetRecord(id.clone(), action(from_string(field.get()))));
                 }
             }),
     )
 }
+
+fn identity<T>(t: T) -> T { t }

@@ -19,9 +19,9 @@ impl ReactiveLibrary {
                         author: RwSignal::new(record.author),
                         url: RwSignal::new(record.url),
                         typ: RwSignal::new(record.typ),
-                        date: RwSignal::new(record.date),
-                        date_added: RwSignal::new(record.date_added),
-                        read_last: RwSignal::new(record.read_last),
+                        date: RwSignal::new(record.date.to_string()),
+                        date_added: RwSignal::new(record.date_added.to_string()),
+                        read_last: RwSignal::new(record.read_last.to_string()),
                     })
                     .collect(),
             ),
@@ -60,9 +60,9 @@ impl ReactiveLibrary {
                             Author(v) => r.author.set(v),
                             Url(v) => r.url.set(v),
                             Type(v) => r.typ.set(v),
-                            Date(v) => r.date.set(v),
-                            DateAdded(v) => r.date_added.set(v),
-                            ReadLast(v) => r.read_last.set(v),
+                            Date(v) => r.date.set(v.to_string()),
+                            DateAdded(v) => r.date_added.set(v.to_string()),
+                            ReadLast(v) => r.read_last.set(v.to_string()),
                         }
                         break;
                     }
