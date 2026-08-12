@@ -1,4 +1,5 @@
 use super::RecordId;
+use super::date;
 
 use anyhow::{Result, anyhow};
 
@@ -17,11 +18,15 @@ pub enum RecordField {
     Author(String),
     Url(String),
     Type(String), // TODO enum?
-    Date(i64), // seconds since 1970
-    DateAdded(i64),
-    ReadLast(i64),
+    Date(date::Date),
+    DateAdded(date::Date),
+    ReadLast(date::Date),
 }
 pub type Event = Action<(usize, RecordId), usize>;
+
+fn date_from(i: i64) -> date::Date {
+    date::Date::from_i64(i)
+}
 
 impl Event {
     pub fn from_patch(patch: automerge::patches::Patch) -> Result<Self> {
@@ -54,9 +59,9 @@ impl Event {
                             ("author", _, Ok(s)) => Some(Author(s)),
                             ("url", _, Ok(s)) => Some(Url(s)),
                             ("type", _, Ok(s)) => Some(Type(s)),
-                            ("date", Some(i), _) => Some(Date(i)),
-                            ("date_added", Some(i), _) => Some(DateAdded(i)),
-                            ("read_last", Some(i), _)  => Some(ReadLast(i)),
+                            ("date", Some(i), _) => Some(RecordField::Date(date_from(i))),
+                            ("date_added", Some(i), _) => Some(DateAdded(date_from(i))),
+                            ("read_last", Some(i), _)  => Some(ReadLast(date_from(i))),
                             _ => None
                         };
                         match o_field {

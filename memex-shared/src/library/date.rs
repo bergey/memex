@@ -1,4 +1,5 @@
 // a memex Date can represent Year only, Year-Month, or Year-Month-Date.
+#[derive(Clone, Copy, Debug)]
 pub struct Date(i64);
 
 impl Date {

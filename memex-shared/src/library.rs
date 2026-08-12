@@ -21,9 +21,9 @@ pub struct Record {
     pub author: String,
     pub url: String,
     pub typ: String,
-    pub date: Option<i64>,
-    pub date_added: Option<i64>,
-    pub read_last: Option<i64>,
+    pub date: Option<date::Date>,
+    pub date_added: Option<date::Date>,
+    pub read_last: Option<date::Date>,
 }
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub struct RecordId(ObjId);
@@ -68,9 +68,9 @@ impl Library {
                     author: self.get_string(&r_id, "author"),
                     url: self.get_string(&r_id, "url"),
                     typ: self.get_string(&r_id, "type"),
-                    date: self.get_i64(&r_id, "date"),
-                    date_added: self.get_i64(&r_id, "date_added"),
-                    read_last: self.get_i64(&r_id, "read_last"),
+                    date: self.get_i64(&r_id, "date").map(date::Date::from_i64),
+                    date_added: self.get_i64(&r_id, "date_added").map(date::Date::from_i64),
+                    read_last: self.get_i64(&r_id, "read_last").map(date::Date::from_i64),
                     id: RecordId(r_id),
                 }
             })
@@ -119,9 +119,9 @@ impl Library {
                     Author(v) => ("author", v.into()),
                     Url(v) => ("url", v.into()),
                     Type(v) => ("type", v.into()),
-                    Date(v) => ("date", Timestamp(*v)),
-                    DateAdded(v) => ("date_added", Timestamp(*v)),
-                    ReadLast(v) => ("read_last", Timestamp(*v)),
+                    Date(v) => ("date", Timestamp(v.to_i64())),
+                    DateAdded(v) => ("date_added", Timestamp(v.to_i64())),
+                    ReadLast(v) => ("read_last", Timestamp(v.to_i64())),
                 };
                 self.replicated.put(r_id, prop, value).unwrap();
             }
