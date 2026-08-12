@@ -7,20 +7,21 @@ impl Date {
     // may check calendar in future
     pub fn to_string(&self) -> String {
         match (self.year(), self.month(), self.day()) {
+            (0, _, _) => "".to_owned(),
             (y, 0, 0) => format!("{y}"),
             (y, m, 0) => format!("{y}-{m:02}"),
             (y, m, d) => format!("{y}-{m:02}-{d:02}")
         }
     }
 
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn from_str(s: &str) -> Self {
         let mut parts = s.split('-');
         let y = parts.next().and_then(|y| y.parse::<i64>().ok());
         let m = parts.next().and_then(|m| m.parse::<u8>().ok()).unwrap_or(0);
         let d = parts.next().and_then(|m| m.parse::<u8>().ok()).unwrap_or(0);
         match (y, parts.next()) {
-            (Some(y), None) => Some(Self::from_parts(y, m, d)),
-            _ => None
+            (Some(y), None) => Self::from_parts(y, m, d),
+            _ => Self::from_parts(0 ,0 ,0)
         }
     }
 
@@ -41,6 +42,12 @@ impl Date {
 
     fn year(&self) -> i64 {
         self.0 >> 9
+    }
+}
+
+impl Default for Date {
+    fn default() -> Self {
+        Date::from_i64(0)
     }
 }
 

@@ -46,7 +46,7 @@ struct Record {
     author: RwSignal<String>,
     url: RwSignal<String>,
     typ: RwSignal<String>,
-    date: RwSignal<Option<Date>>,
-    date_added: RwSignal<Option<Date>>,
-    read_last: RwSignal<Option<Date>>,
+    date: RwSignal<Date>,
+    date_added: RwSignal<Date>,
+    read_last: RwSignal<Date>,
 }

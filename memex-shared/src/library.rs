@@ -21,9 +21,9 @@ pub struct Record {
     pub author: String,
     pub url: String,
     pub typ: String,
-    pub date: Option<date::Date>,
-    pub date_added: Option<date::Date>,
-    pub read_last: Option<date::Date>,
+    pub date: date::Date,
+    pub date_added: date::Date,
+    pub read_last: date::Date,
 }
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub struct RecordId(ObjId);
@@ -68,9 +68,9 @@ impl Library {
                     author: self.get_string(&r_id, "author"),
                     url: self.get_string(&r_id, "url"),
                     typ: self.get_string(&r_id, "type"),
-                    date: self.get_i64(&r_id, "date").map(date::Date::from_i64),
-                    date_added: self.get_i64(&r_id, "date_added").map(date::Date::from_i64),
-                    read_last: self.get_i64(&r_id, "read_last").map(date::Date::from_i64),
+                    date: date::Date::from_i64(self.get_i64(&r_id, "date").unwrap_or(0)),
+                    date_added: date::Date::from_i64(self.get_i64(&r_id, "date_added").unwrap_or(0)),
+                    read_last: date::Date::from_i64(self.get_i64(&r_id, "read_last").unwrap_or(0)),
                     id: RecordId(r_id),
                 }
             })
