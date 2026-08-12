@@ -447,6 +447,7 @@ dependencies = [
  "js-sys",
  "leptos",
  "memex-shared",
+ "proptest",
  "tracing",
  "wasm-bindgen",
  "wasm-bindgen-futures",

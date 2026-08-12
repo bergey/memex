@@ -47,3 +47,6 @@ features = [
   'WebSocket',
   'Window',
 ]
+
+[dev-dependencies]
+proptest = "1.11.0"
