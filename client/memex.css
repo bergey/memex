@@ -10,6 +10,12 @@
     font-size: 16px;
 }
 
+@layer reset {
+    * {
+        box-sizing: border-box;
+    }
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
@@ -27,15 +33,34 @@ section {
     padding-inline: 1em;
 }
 
+h1 {
+  font-size: 1.6rem;
+}
+
 /* #list */
 
+.menu {
+    background: #dde;
+    width: 100%;
+    display: flex;
+    padding-inline: 1em;
+    padding-block: 0.3em;
+}
+
+button {
+    background: #dde;
+    border: solid 1px var(--slate);
+}
+
 #list {
-  flex: 2;
+    flex: 2;
+    padding-inline: 0;          /*so menu is full width*/
 }
 
 table {
     border-collapse: collapse;
-    width: 100%;
+    width: calc(100% - 2em);
+    margin: 1em;
 }
 
 tr {

@@ -12,11 +12,13 @@ pub fn list_section(library: super::ReactiveLibrary, tx: Sender<Action>) -> impl
         move || selected.get().map(|r| r.id)
     };
     section().id("list").child((
-        button()
-            .on(event::click, move |_| {
-                library_add_button.send(Action::AddRecord(()));
-            })
-            .child("Add Record"),
+        div().class("menu").child((
+            button()
+                .on(event::click, move |_| {
+                    library_add_button.send(Action::AddRecord(()));
+                })
+                .child("Add"),
+        )),
         table().child((
             thead().child(tr().child((th().child("Title"), th().child("Author")))),
             For(ForProps {
