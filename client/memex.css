@@ -27,9 +27,24 @@ section {
     padding-inline: 1em;
 }
 
+/* #list */
+
+#list {
+  flex: 2;
+}
+
 table {
     border-collapse: collapse;
     width: 100%;
+}
+
+tr {
+  border-bottom: solid 1px #dde;
+  min-height: 1em;
+}
+
+tr.selected {
+    background: #dde;
 }
 
 th {
@@ -38,19 +53,28 @@ th {
 }
 
 td {
-    padding: 0.5em;
+  height: 1.2em;
 }
 
-tr.selected {
-    /* color: ; */
-    background: #aaa;
-}
+/* #details */
 
 #details > ul {
     list-style: none;
     padding: 0;
 }
 
+#details li {
+    padding: .2em;
+    width: 100%;
+}
+
+label {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+}
+
 input {
     margin-inline-start: 1em;
+    flex: 1;
 }
