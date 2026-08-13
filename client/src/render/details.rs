@@ -31,7 +31,14 @@ pub fn details(tx: Sender<Action>, selected: RwSignal<Option<Record>>) -> impl I
                 move |name: &'static str,
                       signal: RwSignal<String>,
                       action: &'static dyn Fn(Date) -> RecordField| {
-                    field(tx.clone(), id.clone(), name, signal, action, &Date::from_str)
+                    field(
+                        tx.clone(),
+                        id.clone(),
+                        name,
+                        signal,
+                        action,
+                        &Date::from_str,
+                    )
                 }
             };
 
@@ -45,6 +52,53 @@ pub fn details(tx: Sender<Action>, selected: RwSignal<Option<Record>>) -> impl I
                     date_field("Date", selected.date, &RecordField::Date),
                     date_field("Date Added", selected.date_added, &RecordField::DateAdded),
                     date_field("Read Last", selected.read_last, &RecordField::ReadLast),
+                    div().id("tags").child((
+                        button()
+                            .on(event::click, {
+                                let mut tx = tx.clone();
+                                let id = selected.id.clone();
+                                move |_| tx.send(Action::AddTag(id.clone(), ()))
+                            })
+                            .child("Add Tag"),
+                        ul().child(For(ForProps {
+                            each: move || selected.tags.get(),
+                            key: |tag| tag.id.clone(),
+                            children: {
+                                let tx = tx.clone();
+                                move |tag| {
+                                    li().child((
+                                        input().bind(leptos::attr::Value, tag.name).on(
+                                            event::change,
+                                            {
+                                                let mut tx = tx.clone();
+                                                let r_id = selected.id.clone();
+                                                let t_id = tag.id.clone();
+                                                move |_| {
+                                                    tx.send(Action::SetTag(
+                                                        r_id.clone(),
+                                                        t_id.clone(),
+                                                        tag.name.get(),
+                                                    ))
+                                                }
+                                            },
+                                        ),
+                                        button().child("-").on(event::click, {
+                                                let mut tx = tx.clone();
+                                                let r_id = selected.id.clone();
+                                                let t_id = tag.id.clone();
+                                                move |_| {
+                                                    tx.send(Action::DeleteTag(
+                                                        r_id.clone(),
+                                                        t_id.clone(),
+                                                    ))
+                                                }
+                                            }
+                                        ),
+                                    ))
+                                }
+                            },
+                        })),
+                    )),
                 )),))
                 .into_any()
         } else {
@@ -77,10 +131,15 @@ fn field<T>(
                 let mut tx = tx.clone();
                 let id = id.clone();
                 move |_| {
-                    tx.send(Action::SetRecord(id.clone(), action(from_string(field.get()))));
+                    tx.send(Action::SetRecord(
+                        id.clone(),
+                        action(from_string(field.get())),
+                    ));
                 }
             }),
     )
 }
 
-fn identity<T>(t: T) -> T { t }
+fn identity<T>(t: T) -> T {
+    t
+}

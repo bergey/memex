@@ -25,9 +25,19 @@ pub struct Record {
     pub date: date::Date,
     pub date_added: date::Date,
     pub read_last: date::Date,
+    pub tags: Vec<Tag>,
 }
+
+#[derive(Clone, Debug)]
+pub struct Tag {
+    pub id: TagId,
+    pub name: String,
+}
+
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub struct RecordId(ObjId);
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+pub struct TagId(ObjId);
 
 impl Library {
     pub fn new(actor_id: ActorId) -> Self {
@@ -63,17 +73,23 @@ impl Library {
     pub fn records(&self) -> impl Iterator<Item = Record> {
         self.replicated
             .values(self.records_id())
-            .map(|(_val, r_id)| {
-                Record {
-                    title: self.get_string(&r_id, "title"),
-                    author: self.get_string(&r_id, "author"),
-                    url: self.get_string(&r_id, "url"),
-                    typ: self.get_string(&r_id, "type"),
-                    date: date::Date::from_i64(self.get_i64(&r_id, "date").unwrap_or(0)),
-                    date_added: date::Date::from_i64(self.get_i64(&r_id, "date_added").unwrap_or(0)),
-                    read_last: date::Date::from_i64(self.get_i64(&r_id, "read_last").unwrap_or(0)),
-                    id: RecordId(r_id),
-                }
+            .map(|(_val, r_id)| Record {
+                title: self.get_string(&r_id, "title"),
+                author: self.get_string(&r_id, "author"),
+                url: self.get_string(&r_id, "url"),
+                typ: self.get_string(&r_id, "type"),
+                date: self.get_date(&r_id, "date"),
+                date_added: self.get_date(&r_id, "date_added"),
+                read_last: self.get_date(&r_id, "read_last"),
+                tags: self
+                    .iter_set(&r_id, "tags")
+                    .unwrap()
+                    .map(|(val, t_id)| Tag {
+                        id: TagId(t_id),
+                        name: val.into_string().unwrap(),
+                    })
+                    .collect(),
+                id: RecordId(r_id),
             })
     }
 
@@ -111,7 +127,30 @@ impl Library {
             DeleteRecord(RecordId(item_id)) => {
                 self.remove_from_set(&self.records_id(), item_id);
             }
+
+            AddTag(RecordId(r_id), _) => {
+                let tags = self.ensure_set(r_id, "tags").unwrap();
+                let len = self.replicated.length(&tags);
+                self.replicated.insert(&tags, len, "").unwrap();
+            }
+
+            DeleteTag(RecordId(r_id), TagId(t_id)) => {
+                let tags = self.ensure_set(r_id, "tags").unwrap();
+                self.remove_from_set(&tags, t_id);
+            }
+
+            SetTag(RecordId(r_id), TagId(t_id), s) => {
+                let tags = self.ensure_set(r_id, "tags").unwrap();
+                let o_index = self
+                    .replicated
+                    .values(&tags)
+                    .position(|(_, id)| id == *t_id);
+                if let Some(index) = o_index {
+                    self.replicated.put(&tags, index, s.to_string()).unwrap();
+                }
+            }
         }
+
         self.get_patches()
     }
 
@@ -121,5 +160,11 @@ impl Library {
             .into_iter()
             .filter_map(|p| Event::from_patch(p).log_error())
             .collect()
+    }
+
+    fn get_date(&self, r_id: &ObjId, field: &str) -> date::Date {
+        self.get_i64(r_id, field)
+            .map(date::Date::from_i64)
+            .unwrap_or(Default::default())
     }
 }

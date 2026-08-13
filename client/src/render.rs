@@ -3,7 +3,7 @@ mod library;
 mod list;
 
 use crate::prelude::*;
-use memex_shared::library::{RecordId, action::Action};
+use memex_shared::library::{RecordId, TagId, action::Action};
 
 use leptos::html::*;
 use leptos::prelude::*;
@@ -49,4 +49,11 @@ struct Record {
     date: RwSignal<String>,
     date_added: RwSignal<String>,
     read_last: RwSignal<String>,
+    tags: RwSignal<Vec<Tag>>,
+}
+
+#[derive(Clone, Debug)]
+struct Tag {
+    id: TagId,
+    name: RwSignal<String>,
 }

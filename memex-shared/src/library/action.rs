@@ -1,15 +1,20 @@
-use super::RecordId;
 use super::date;
+use super::{RecordId, TagId};
+
+use tracing::*;
 
 use anyhow::{Result, anyhow};
 
 // add is () when starting an edit, (usize, ObjId) when finishing
 #[derive(Clone, Debug)]
-pub enum Action<AR = (), DR = RecordId> {
+pub enum Action<AR = (), DR = RecordId, AT = (), DT = TagId> {
     SetName(String),
     AddRecord(AR),
     SetRecord(RecordId, RecordField),
     DeleteRecord(DR),
+    AddTag(RecordId, AT),
+    SetTag(RecordId, TagId, String),
+    DeleteTag(RecordId, DT),
 }
 
 #[derive(Clone, Debug)]
@@ -22,7 +27,7 @@ pub enum RecordField {
     DateAdded(date::Date),
     ReadLast(date::Date),
 }
-pub type Event = Action<(usize, RecordId), usize>;
+pub type Event = Action<(usize, RecordId), usize, TagId, usize>;
 
 fn date_from(i: i64) -> date::Date {
     date::Date::from_i64(i)
@@ -33,6 +38,7 @@ impl Event {
         use Action::*;
         use RecordField::*;
         use automerge::patches::PatchAction::*;
+        debug!("{:?}", patch);
         if patch.path.len() == 0 {
             match patch.action {
                 PutMap {
@@ -61,19 +67,27 @@ impl Event {
                             ("type", _, Ok(s)) => Some(Type(s)),
                             ("date", Some(i), _) => Some(RecordField::Date(date_from(i))),
                             ("date_added", Some(i), _) => Some(DateAdded(date_from(i))),
-                            ("read_last", Some(i), _)  => Some(ReadLast(date_from(i))),
-                            _ => None
+                            ("read_last", Some(i), _) => Some(ReadLast(date_from(i))),
+                            _ => None,
                         };
                         match o_field {
                             Some(field) => Ok(SetRecord(RecordId(patch.obj), field)),
                             None => Err(anyhow!("unknown action on a record"))?,
                         }
-                    },
+                    }
                     (1, DeleteSeq { index, length: 1 }) => Ok(DeleteRecord(index)),
                     (1, Insert { index, values }) if values.len() == 1 => Ok(AddRecord((
                         index,
                         RecordId(values.iter().next().unwrap().1.clone()),
                     ))),
+                    (3, Insert {..}) => Ok(AddTag(RecordId(patch.path.last().unwrap().0.clone()), TagId(patch.obj))),
+
+                    // Patch { obj: Id(46, ActorID("10797249f520da82170bf3767d2ba329"), 3), path: [(Root, Map("records")), (Id(2, ActorID("095ddb9eff479f5cc9968ff5e7190c04"), 1), Seq(0)), (Id(3, ActorID("095ddb9eff479f5cc9968ff5e7190c04"), 1), Map("tags"))], action: PutSeq { index: 6, value: (Scalar(Str("g")), Id(67, ActorID("a5b41846a13d48c95b54555af8879f01"), 9)), conflict: false } }
+                    (3, PutSeq { value, ..}) => Ok(SetTag(RecordId(patch.path.last().unwrap().0.clone()), TagId(patch.obj), value.0.into_string().unwrap())),
+
+                    // Patch { obj: Id(46, ActorID("10797249f520da82170bf3767d2ba329"), 3), path: [(Root, Map("records")), (Id(2, ActorID("095ddb9eff479f5cc9968ff5e7190c04"), 1), Seq(0)), (Id(3, ActorID("095ddb9eff479f5cc9968ff5e7190c04"), 1), Map("tags"))], action: DeleteSeq { index: 8, length: 1 } }
+                    (3, DeleteSeq {index, ..}) => Ok(DeleteTag(RecordId(patch.path.last().unwrap().0.clone()), index)),
+
                     _ => Err(anyhow!("unknown action on records"))?,
                 },
                 _ => Err(anyhow!("unknown key on root of library"))?,

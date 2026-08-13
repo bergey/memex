@@ -1,9 +1,8 @@
-use super::{ReactiveLibrary, Record};
+use super::{ReactiveLibrary, Record, Tag};
 use crate::prelude::*;
-use memex_shared::library::{Library, action::Event};
+use memex_shared::library::{self, Library, RecordId, action::Event};
 
 use leptos::prelude::*;
-
 
 impl ReactiveLibrary {
     pub fn from_replicated(library: &Library) -> ReactiveLibrary {
@@ -22,6 +21,16 @@ impl ReactiveLibrary {
                         date: RwSignal::new(record.date.to_string()),
                         date_added: RwSignal::new(record.date_added.to_string()),
                         read_last: RwSignal::new(record.read_last.to_string()),
+                        tags: RwSignal::new(
+                            record
+                                .tags
+                                .into_iter()
+                                .map(|library::Tag { id, name }| Tag {
+                                    id,
+                                    name: RwSignal::new(name),
+                                })
+                                .collect(),
+                        ),
                     })
                     .collect(),
             ),
@@ -48,6 +57,7 @@ impl ReactiveLibrary {
                         date: RwSignal::new(Default::default()),
                         date_added: RwSignal::new(Default::default()),
                         read_last: RwSignal::new(Default::default()),
+                        tags: RwSignal::new(Vec::new()),
                     },
                 );
             }),
@@ -72,6 +82,52 @@ impl ReactiveLibrary {
             DeleteRecord(index) => self.records.update(|rs| {
                 rs.remove(index);
             }),
+
+            AddTag(r_id, t_id) => {
+                self.update_record(&r_id, |r| {
+                    r.tags.update(|tags| {
+                        tags.push(Tag {
+                            id: t_id.clone(),
+                            name: RwSignal::new("".to_string()),
+                        });
+                    });
+                });
+            }
+
+            DeleteTag(r_id, ix) => {
+                self.update_record(&r_id, |r| {
+                    r.tags.update(|tags| {
+                        tags.remove(ix);
+                    });
+                });
+            }
+
+            SetTag(r_id, t_id, s) => {
+                self.update_record(&r_id, |r| {
+                    r.tags.update(|tags| {
+                        let o_ix = tags.iter().position(|t| t.id == t_id);
+                        if let Some(ix) = o_ix {
+                            tags[ix].name.set(s.clone());
+                        }
+                    });
+                });
+            }
         }
+    }
+
+    fn update_record<F>(&mut self, r_id: &RecordId, block: F) -> bool
+    where
+        F: Fn(&mut Record),
+    {
+        let mut ret = false;
+        self.records.update(|rs| {
+            for r in rs {
+                if r.id == *r_id {
+                    block(r);
+                    ret = true;
+                }
+            }
+        });
+        ret
     }
 }
