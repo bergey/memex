@@ -1,4 +1,5 @@
 pub mod action;
+mod crdt;
 pub mod date;
 
 use crate::errors::LogResult;
@@ -76,25 +77,6 @@ impl Library {
             })
     }
 
-    fn add_to_set(&mut self, set_id: &ObjId, obj_type: ObjType) -> ObjId {
-        let len = self.replicated.length(set_id);
-        self.replicated
-            .insert_object(set_id, len, obj_type)
-            .unwrap()
-    }
-
-    fn remove_from_set(&mut self, set_id: &ObjId, item_id: &ObjId) {
-        let o_index = self
-            .replicated
-            .values(set_id)
-            .position(|(_, id)| id == *item_id);
-        if let Some(index) = o_index {
-            self.replicated
-                .splice(set_id, index, 1, std::iter::empty::<&str>())
-                .unwrap();
-        }
-    }
-
     pub fn apply(&mut self, action: &Action<()>) -> Vec<Event> {
         use action::Action::*;
         match action {
@@ -139,23 +121,5 @@ impl Library {
             .into_iter()
             .filter_map(|p| Event::from_patch(p).log_error())
             .collect()
-    }
-
-    fn get_string(&self, r_id: &ObjId, field: &str) -> String {
-        self.replicated
-            .get(&r_id, field)
-            .log_error()
-            .flatten()
-            .map(|a| a.0.into_string().ok())
-            .flatten()
-            .unwrap_or_else(|| "".to_string())
-    }
-
-    fn get_i64(&self, r_id: &ObjId, field: &str) -> Option<i64> {
-        self.replicated
-            .get(&r_id, field)
-            .log_error()
-            .flatten()
-            .and_then(|a| a.0.to_i64())
     }
 }
