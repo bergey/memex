@@ -20,7 +20,14 @@ pub async fn load_library(id: LibraryId) -> Library {
     try_load(id)
         .await
         .log_error()
-        .and_then(|x| x.dyn_into().map_err(|_| "dyn_into failed").log_error())
+        .and_then(|jsv| decode_library(id, jsv))
+        .unwrap_or_else(|| Library::new(local_actor_id().unwrap()))
+}
+
+fn decode_library(id: LibraryId, jsv: JsValue) -> Option<Library> {
+    jsv.dyn_into()
+        .map_err(|_| "decode_library: dyn_into Uint8Array failed")
+        .log_error()
         .map(|array: Uint8Array| array.to_vec())
         .and_then(|bytes: Vec<u8>| AutoCommit::load(bytes.as_ref()).log_error())
         // TODO validate schema
@@ -28,7 +35,6 @@ pub async fn load_library(id: LibraryId) -> Library {
             am.update_diff_cursor();
             Library { id, replicated: am }
         })
-        .unwrap_or_else(|| Library::new(local_actor_id().unwrap()))
 }
 
 async fn try_load(id: LibraryId) -> OpenDbResult<JsValue> {
