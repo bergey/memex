@@ -7,7 +7,7 @@ use indexed_db_futures::OpenDbResult;
 use indexed_db_futures::database::Database;
 use indexed_db_futures::prelude::*;
 use indexed_db_futures::transaction::TransactionMode;
-use js_sys::Uint8Array;
+use js_sys::{JsString, Uint8Array};
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::spawn_local;
 
@@ -68,6 +68,38 @@ async fn try_save_bytes(id: LibraryId, bytes: &[u8]) -> OpenDbResult<()> {
         .build()?;
     transaction.commit().await?;
     Ok(())
+}
+
+pub async fn load_some_library() -> Library {
+    try_load_some_library()
+        .await
+        .log_error()
+        .flatten()
+        .and_then(|(key, val)| {
+            let s: String = key.dyn_into::<JsString>().ok()?.into();
+            let id = LibraryId::from_str(&s)?;
+            decode_library(id, val)
+        })
+        .unwrap_or_else(|| Library::new(local_actor_id()))
+}
+
+// Key, Value
+async fn try_load_some_library() -> OpenDbResult<Option<(JsValue, JsValue)>> {
+    let db = open_database().await?;
+    let transaction = db
+        .transaction("libraries")
+        .with_mode(TransactionMode::Readonly)
+        .build()?;
+    let store = transaction.object_store("libraries")?;
+    let mut keys = store.get_all_keys().with_limit(1).build()?.await?;
+    let kv = match keys.next().transpose()? {
+        Some(k) => {
+            let o_value = store.get(&k).primitive()?.await?;
+            o_value.map(|v| (k, v))
+        }
+        None => None,
+    };
+    Ok(kv)
 }
 
 async fn open_database() -> OpenDbResult<Database> {

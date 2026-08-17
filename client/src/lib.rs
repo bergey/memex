@@ -6,7 +6,7 @@ mod sync;
 
 use automerge::sync::SyncDoc;
 use memex_shared::library::{
-    Library, LibraryId,
+    Library,
     action::{Action, Event},
 };
 use prelude::*;
@@ -38,8 +38,7 @@ pub fn start(server_ws_url: Option<String>) -> Result<()> {
     };
 
     spawn_local((async move || {
-        // TODO actual library id
-        let library = disk::load_library(LibraryId(0)).await;
+        let library = disk::load_some_library().await;
         let reactive = render::ReactiveLibrary::from_replicated(&library);
         let mut reactive_for_updates = reactive.clone();
 
