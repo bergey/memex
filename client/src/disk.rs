@@ -21,7 +21,7 @@ pub async fn load_library(id: LibraryId) -> Library {
         .await
         .log_error()
         .and_then(|jsv| decode_library(id, jsv))
-        .unwrap_or_else(|| Library::new(local_actor_id().unwrap()))
+        .unwrap_or_else(|| Library::new(local_actor_id()))
 }
 
 fn decode_library(id: LibraryId, jsv: JsValue) -> Option<Library> {
