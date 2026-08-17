@@ -1,4 +1,4 @@
-use super::{Message, WebsocketBackoff, onmessage_callback};
+use super::{ConnStatus, WebsocketBackoff, onmessage_callback};
 use crate::prelude::*;
 use wasm_bindgen::JsCast;
 
@@ -15,7 +15,7 @@ impl super::ServerSync {
                     ws.set_onmessage(Some(cb.as_ref().unchecked_ref()));
                     cb.forget();
                     self.ws = WebsocketBackoff::Connected(ws);
-                    self.tx.send(Message::Connected);
+                    self.tx_c.send(ConnStatus::Connected);
                 }
                 Err(err) => {
                     warn!(?err, "could not open websocket");
