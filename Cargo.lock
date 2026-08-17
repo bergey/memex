@@ -2556,6 +2556,7 @@ dependencies = [
  "automerge",
  "axum",
  "lazy_static",
+ "memex-shared",
  "prometheus",
  "sqlx",
  "tokio",

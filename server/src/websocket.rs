@@ -2,6 +2,7 @@ use crate::database;
 use crate::metrics;
 use crate::observability::hist_time_since;
 use crate::prelude::*;
+use memex_shared::message::Message;
 
 use automerge::AutoCommit;
 use automerge::sync::SyncDoc;
@@ -88,16 +89,21 @@ async fn apply_message_reply(
     metrics::AUTOMERGE_MESSAGE_RECEIVED.inc();
     let message =
         decode_message(ws_msg).inspect_err(|_| metrics::GARBAGE_MESSAGE_RECEIVED.inc())?;
-    let id = Uuid::nil(); // TODO ID from message / history
-    let mut document = database::apply_message(&database.postgres, id, sync_state, message).await?;
-    let _ = BROADCAST.send(document.clone());
-    let o_reply = document.sync().generate_sync_message(sync_state);
-    Ok(o_reply.map(|reply| ws::Message::Binary(reply.encode().into())))
+    match message {
+        Message::Library(am_msg) => {
+            let id = Uuid::nil(); // TODO ID from message / history
+            let mut document =
+                database::apply_message(&database.postgres, id, sync_state, am_msg).await?;
+            let _ = BROADCAST.send(document.clone());
+            let o_reply = document.sync().generate_sync_message(sync_state);
+            Ok(o_reply.map(|reply| ws::Message::Binary(reply.encode().into())))
+        }
+    }
 }
 
-fn decode_message(ws_msg: ws::Message) -> anyhow::Result<automerge::sync::Message> {
+fn decode_message(ws_msg: ws::Message) -> anyhow::Result<Message> {
     match ws_msg {
-        ws::Message::Binary(bytes) => Ok(automerge::sync::Message::decode(bytes.as_ref())?),
+        ws::Message::Binary(bytes) => Ok(Message::decode(bytes.as_ref())?),
         _ => Err(anyhow::anyhow!("expected binary WS message")),
     }
 }

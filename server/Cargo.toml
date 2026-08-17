@@ -5,6 +5,7 @@ edition.workspace = true
 authors.workspace = true
 
 [dependencies]
+memex-shared = { path = "../memex-shared" }
 anyhow.workspace = true
 automerge.workspace = true
 axum = { version = "0.8.9", features = ["ws"] }

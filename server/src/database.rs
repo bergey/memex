@@ -5,6 +5,7 @@ use automerge::{
 use sqlx::*;
 use uuid::Uuid;
 
+// TODO rename before I add any more AM doc types
 pub async fn apply_message(
     database: &PgPool,
     id: Uuid,
