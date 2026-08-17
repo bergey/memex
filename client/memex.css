@@ -40,6 +40,7 @@ button {
     background: #dde;
     border: solid 1px var(--slate);
     box-shadow: none;
+    margin: 0 0.39em;
 }
 
 #list {
