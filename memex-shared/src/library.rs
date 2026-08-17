@@ -37,12 +37,17 @@ pub struct Tag {
     pub name: String,
 }
 
+
 impl Library {
     pub fn new(actor_id: ActorId) -> Self {
         let mut am = AutoCommit::new();
-        am.set_actor(actor_id);
+        // Libraries created on separate clients should share the initial schema history
+        // I'm not sure if this matters
+        let nil_actor_id = ActorId::from(&[0u8; 8]);
+        am.set_actor(nil_actor_id);
         am.put(Root, "name", "My Library").unwrap();
         am.put_object(Root, "records", ObjType::List).unwrap();
+        am.set_actor(actor_id);
         am.update_diff_cursor(); // subscriber should never receive the changes above
         let id = LibraryId::random();
         Library { id, replicated: am }
