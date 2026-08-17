@@ -1,6 +1,6 @@
-use crate::prelude::*;
-use memex_shared::library::Library;
 use crate::actor::local_actor_id;
+use crate::prelude::*;
+use memex_shared::library::{Library, LibraryId};
 
 use automerge::AutoCommit;
 use indexed_db_futures::OpenDbResult;
@@ -16,7 +16,8 @@ pub fn save_library(library: &mut Library) {
     spawn_local(save_bytes(bytes));
 }
 
-pub async fn load_library(_id: &str) -> Library {
+pub async fn load_library(id: LibraryId) -> Library {
+    // TODO pass id
     try_load()
         .await
         .log_error()
@@ -26,7 +27,7 @@ pub async fn load_library(_id: &str) -> Library {
         // TODO validate schema
         .map(|mut am| {
             am.update_diff_cursor();
-            Library::from_replicated(am)
+            Library { id, replicated: am }
         })
         .unwrap_or_else(|| Library::new(local_actor_id().unwrap()))
 }

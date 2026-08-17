@@ -5,11 +5,11 @@ mod render;
 mod sync;
 
 use automerge::sync::SyncDoc;
-use prelude::*;
 use memex_shared::library::{
-    Library,
+    Library, LibraryId,
     action::{Action, Event},
 };
+use prelude::*;
 
 use futures::channel::mpsc::Receiver;
 use futures::select;
@@ -38,7 +38,8 @@ pub fn start(server_ws_url: Option<String>) -> Result<()> {
     };
 
     spawn_local((async move || {
-        let library = disk::load_library("my_library").await;
+        // TODO actual library id
+        let library = disk::load_library(LibraryId(0)).await;
         let reactive = render::ReactiveLibrary::from_replicated(&library);
         let mut reactive_for_updates = reactive.clone();
 

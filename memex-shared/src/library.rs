@@ -1,9 +1,11 @@
 pub mod action;
 mod crdt;
 pub mod date;
+pub mod ids;
 
 use crate::errors::LogResult;
 use action::*;
+pub use ids::*;
 
 use automerge::{
     self, ActorId, AutoCommit, ObjId, ObjId::Root, ObjType, ReadDoc, transaction::Transactable,
@@ -12,6 +14,7 @@ use automerge::{
 /// for now, it only makes sense to have one Library
 /// in future, it will be possible for several users to share a Library, so useful for one User to have / belong to several Libraries
 pub struct Library {
+    pub id: LibraryId,
     pub replicated: AutoCommit,
 }
 
@@ -34,11 +37,6 @@ pub struct Tag {
     pub name: String,
 }
 
-#[derive(PartialEq, Eq, Hash, Clone, Debug)]
-pub struct RecordId(ObjId);
-#[derive(PartialEq, Eq, Hash, Clone, Debug)]
-pub struct TagId(ObjId);
-
 impl Library {
     pub fn new(actor_id: ActorId) -> Self {
         let mut am = AutoCommit::new();
@@ -46,11 +44,8 @@ impl Library {
         am.put(Root, "name", "My Library").unwrap();
         am.put_object(Root, "records", ObjType::List).unwrap();
         am.update_diff_cursor(); // subscriber should never receive the changes above
-        Self::from_replicated(am)
-    }
-
-    pub fn from_replicated(replicated: AutoCommit) -> Self {
-        Library { replicated }
+        let id = LibraryId::random();
+        Library { id, replicated: am }
     }
 
     pub fn name(&self) -> String {
