@@ -13,12 +13,11 @@ use wasm_bindgen_futures::spawn_local;
 
 pub fn save_library(library: &mut Library) {
     let bytes = library.replicated.save();
-    spawn_local(save_bytes(bytes));
+    spawn_local(save_bytes(library.id, bytes));
 }
 
 pub async fn load_library(id: LibraryId) -> Library {
-    // TODO pass id
-    try_load()
+    try_load(id)
         .await
         .log_error()
         .and_then(|x| x.dyn_into().map_err(|_| "dyn_into failed").log_error())
@@ -32,7 +31,7 @@ pub async fn load_library(id: LibraryId) -> Library {
         .unwrap_or_else(|| Library::new(local_actor_id().unwrap()))
 }
 
-async fn try_load() -> OpenDbResult<JsValue> {
+async fn try_load(id: LibraryId) -> OpenDbResult<JsValue> {
     let db = open_database().await?;
     let transaction = db
         .transaction("libraries")
@@ -40,17 +39,17 @@ async fn try_load() -> OpenDbResult<JsValue> {
         .build()?;
     let store = transaction.object_store("libraries")?;
     store
-        .get("my_library")
+        .get(id.to_string())
         .primitive()?
         .await?
-        .ok_or(js_sys::Error::new("my_library not found").into())
+        .ok_or(js_sys::Error::new("library not found").into())
 }
 
-async fn save_bytes(bytes: Vec<u8>) {
-    try_save_bytes(bytes.as_ref()).await.log_error();
+async fn save_bytes(id: LibraryId, bytes: Vec<u8>) {
+    try_save_bytes(id, bytes.as_ref()).await.log_error();
 }
 
-async fn try_save_bytes(bytes: &[u8]) -> OpenDbResult<()> {
+async fn try_save_bytes(id: LibraryId, bytes: &[u8]) -> OpenDbResult<()> {
     let db = open_database().await?;
     let transaction = db
         .transaction("libraries")
@@ -59,8 +58,8 @@ async fn try_save_bytes(bytes: &[u8]) -> OpenDbResult<()> {
     let store = transaction.object_store("libraries")?;
     store
         .put(Into::<JsValue>::into(Uint8Array::from(bytes)))
-        .with_key("my_library")
-        .build()?; // TODO multiple libraries
+        .with_key(id.to_string())
+        .build()?;
     transaction.commit().await?;
     Ok(())
 }

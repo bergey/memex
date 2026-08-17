@@ -7,7 +7,7 @@ pub struct RecordId(pub ObjId);
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub struct TagId(pub ObjId);
 
-#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct LibraryId(pub u64);
 
 impl LibraryId {
