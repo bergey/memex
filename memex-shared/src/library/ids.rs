@@ -16,7 +16,11 @@ impl LibraryId {
     pub fn random() -> Self {
         let low = getrandom::u64().unwrap();
         let high = getrandom::u64().unwrap();
-        LibraryId((high as u128) << 64 + low as u128)
+        Self::from_u64(high, low)
+    }
+
+    fn from_u64(high: u64, low: u64) -> Self {
+        LibraryId(((high as u128) << 64) + low as u128)
     }
 
     pub fn to_string(&self) -> String {
