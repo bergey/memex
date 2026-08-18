@@ -8,8 +8,10 @@ authors.workspace = true
 anyhow.workspace = true
 automerge.workspace = true
 base64 = "0.23.1"
+ciborium = "0.2.2"
 getrandom = "0.4.3"
 log = "0.4.30"
+serde = "1.0.229"
 tracing = "0.1.44"
 uuid = "1.24.1"
 

@@ -1,6 +1,7 @@
 use automerge::ObjId;
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
+use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use getrandom;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
@@ -8,7 +9,7 @@ pub struct RecordId(pub ObjId);
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub struct TagId(pub ObjId);
 
-#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct LibraryId(pub u128);
 
 impl LibraryId {
@@ -16,7 +17,6 @@ impl LibraryId {
         let low = getrandom::u64().unwrap();
         let high = getrandom::u64().unwrap();
         LibraryId((high as u128) << 64 + low as u128)
-
     }
 
     pub fn to_string(&self) -> String {

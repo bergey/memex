@@ -1,22 +1,30 @@
-use automerge::sync as am;
+mod automerge;
 
 use crate::library::LibraryId;
 
-#[derive(Debug, Clone)]
+use ::automerge::sync as am;
+use ciborium;
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Message {
+    #[serde(rename = "l")]
+    #[serde(with = "automerge")]
     Library(am::Message),
+    #[serde(rename = "li")]
     LibraryId(LibraryId),
     // TODO future: user, sharing
 }
 
 impl Message {
     pub fn encode(&self) -> Vec<u8> {
-        // TODO derive
-        vec![]
+        let mut vec = Vec::new();
+        let _ = ciborium::into_writer(self, &mut vec);
+        vec
     }
 
-    pub fn decode(_bytes: &[u8]) -> anyhow::Result<Self> {
-        // TODO derive
-        Err(anyhow::anyhow!("not implemented"))
+    pub fn decode(bytes: &[u8]) -> anyhow::Result<Self> {
+        let msg = ciborium::from_reader(bytes)?;
+        Ok(msg)
     }
 }
