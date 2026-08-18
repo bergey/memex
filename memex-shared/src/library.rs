@@ -13,6 +13,7 @@ use automerge::{
 
 /// for now, it only makes sense to have one Library
 /// in future, it will be possible for several users to share a Library, so useful for one User to have / belong to several Libraries
+#[derive(Clone, Debug)]
 pub struct Library {
     pub id: LibraryId,
     pub replicated: AutoCommit,

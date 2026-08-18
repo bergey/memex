@@ -5,7 +5,7 @@ use crate::library::LibraryId;
 #[derive(Debug, Clone)]
 pub enum Message {
     Library(am::Message),
-    // LibraryId(LibraryId),
+    LibraryId(LibraryId),
     // TODO future: user, sharing
 }
 

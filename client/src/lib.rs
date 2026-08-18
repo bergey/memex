@@ -111,7 +111,10 @@ async fn library_thread(
             r_c = rx_c.recv() => {
                 use sync::ConnStatus::*;
                 match r_c.context("r_c").unwrap() {
-                    Connected => connected = true,
+                    Connected => {
+                        connected = true;
+                        tx_up.send(Message::LibraryId(library.id));
+                    },
                     Disconnected => connected = false,
                 }
             }

@@ -3,12 +3,12 @@ use automerge::{
     sync::{Message, SyncDoc},
 };
 use sqlx::*;
-use uuid::Uuid;
+use memex_shared::LibraryId;
 
 // TODO rename before I add any more AM doc types
 pub async fn apply_message(
     database: &PgPool,
-    id: Uuid,
+    id: LibraryId,
     sync_state: &mut automerge::sync::State,
     message: Message,
 ) -> anyhow::Result<AutoCommit> {
@@ -25,9 +25,9 @@ pub async fn apply_message(
 // TODO shared ID type
 async fn read_library(
     transaction: &mut Transaction<'_, Postgres>,
-    id: Uuid,
+    id: LibraryId,
 ) -> anyhow::Result<Option<AutoCommit>> {
-    let row: Option<Vec<u8>> = query_scalar!("select value from libraries where id = $1", id)
+    let row: Option<Vec<u8>> = query_scalar!("select value from libraries where id = $1", id.to_uuid())
         .fetch_optional(&mut **transaction)
         .await?;
 
@@ -36,14 +36,14 @@ async fn read_library(
 
 async fn save_library(
     transaction: &mut Transaction<'_, Postgres>,
-    id: Uuid,
+    id: LibraryId,
     library: &mut AutoCommit,
 ) -> anyhow::Result<()> {
     let bytes = library.save();
     query!(
         "insert into libraries (id, value) values ($1, $2) \
 on conflict (id) do update set value = $2",
-        id,
+        id.to_uuid(),
         bytes
     )
     .execute(&mut **transaction)
