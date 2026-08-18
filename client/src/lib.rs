@@ -90,6 +90,7 @@ async fn library_thread(
                    }
                }
            },
+
             r_down = rx_down.recv() => {
                 use Message::*;
                 match r_down.context("rx_down").unwrap() {
@@ -104,6 +105,10 @@ async fn library_thread(
                         } else {
                             debug!( ?sync_state, ?our_heads, "no reply");
                         }
+                    }
+
+                    LibraryId(id) => {
+                        // TODO
                     }
                 }
             },

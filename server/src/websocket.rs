@@ -12,6 +12,7 @@ use axum::{
     },
     response::Response,
 };
+use std::collections::HashMap;
 use std::time::Instant;
 use tokio::sync::broadcast::{self, Sender};
 
@@ -21,8 +22,7 @@ lazy_static! {
 
 #[derive(Clone, Debug)]
 struct Client {
-    // TODO state for multiple documents
-    am: automerge::sync::State,
+    am: HashMap<LibraryId, automerge::sync::State>,
     library_out: Option<LibraryId>,
     library_in: Option<LibraryId>,
 }
@@ -30,10 +30,17 @@ struct Client {
 impl Client {
     fn new() -> Self {
         Client {
-            am: automerge::sync::State::new(),
+            am: HashMap::new(),
             library_out: None,
             library_in: None,
         }
+    }
+
+    fn get_am<'a>(&'a mut self, id: LibraryId) -> &'a mut automerge::sync::State {
+        if !self.am.contains_key(&id) {
+            self.am.insert(id, automerge::sync::State::new());
+        }
+        self.am.get_mut(&id).unwrap()
     }
 }
 
@@ -78,7 +85,7 @@ async fn sync_crdt_ws(pools: Pools, mut socket: WebSocket) {
             Ok(doc) = other_clients.recv() => {
                 let mut doc = doc.clone();
                 let heads = doc.replicated.get_heads();
-                match doc.replicated.sync().generate_sync_message(&mut client_state.am) {
+                match doc.replicated.sync().generate_sync_message(&mut client_state.get_am(doc.id)) {
                     None => debug!( sync_state = ?client_state, our_heads = ?heads, "not forwarding"),
                     Some(notice) =>
                     {
@@ -139,14 +146,15 @@ async fn apply_message_reply(
             let id = client_state
                 .library_in
                 .ok_or_else(|| anyhow::anyhow!("sync message before Library ID set"))?;
+            let am_state = client_state.get_am(id);
             let mut document =
-                database::apply_message(&database.postgres, id, &mut client_state.am, am_msg)
+                database::apply_message(&database.postgres, id, am_state, am_msg)
                     .await?;
             let _ = BROADCAST.send(Library {
                 id,
                 replicated: document.clone(),
             });
-            let o_reply = document.sync().generate_sync_message(&mut client_state.am);
+            let o_reply = document.sync().generate_sync_message(am_state);
             Ok(o_reply.map(|msg| (id, Message::Library(msg))))
         }
         Message::LibraryId(id) => {
