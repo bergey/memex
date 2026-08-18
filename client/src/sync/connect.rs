@@ -4,12 +4,13 @@ use wasm_bindgen::JsCast;
 
 use web_sys::WebSocket;
 
+// TODO where do we need to wait for WS to finish connecting?
 impl super::ServerSync {
     pub async fn connect(&mut self) {
-        while self.ws.is_not_connected() {
+        loop {
             match WebSocket::new(&self.url) {
                 Ok(ws) => {
-                    info!("connected WS");
+                    info!(url = self.url, "connected WS");
                     ws.set_binary_type(web_sys::BinaryType::Arraybuffer);
                     let cb = onmessage_callback(self.tx.clone());
                     ws.set_onmessage(Some(cb.as_ref().unchecked_ref()));
@@ -19,20 +20,23 @@ impl super::ServerSync {
                 }
                 Err(err) => {
                     warn!(?err, "could not open websocket");
-                    let exponent = match self.ws {
-                        WebsocketBackoff::Backoff(exponent) => {
-                            self.ws = WebsocketBackoff::Backoff(exponent + 1);
-                            exponent
-                        }
-                        WebsocketBackoff::Connected(_) => {
-                            self.ws = WebsocketBackoff::Backoff(1);
-                            0
-                        }
-                    };
-                    let timeout = exponential_backoff(500, exponent, 14);
-                    sleep(timeout).await;
+                    if let WebsocketBackoff::Connected(_) = self.ws {
+                        self.ws = WebsocketBackoff::Backoff(1);
+                    }
                 }
             }
+            let exponent = match self.ws {
+                WebsocketBackoff::Backoff(exponent) => {
+                    self.ws = WebsocketBackoff::Backoff(exponent + 1);
+                    exponent
+                }
+                WebsocketBackoff::Connected(_) => {
+                    0
+                }
+            };
+            let timeout = exponential_backoff(500, exponent, 14);
+            debug!(exponent, timeout, "sleeping");
+            sleep(timeout).await;
         }
     }
 }
@@ -40,13 +44,12 @@ impl super::ServerSync {
 // exponential backoff with jitter;
 // uniform distribution between min_ms*2^exponent and min_ms*2^(exponent+1)
 fn exponential_backoff(min_ms: u32, exponent: u32, max_exponent: u32) -> i32 {
-    let min = (min_ms * 2_u32.pow(std::cmp::max(max_exponent, exponent))) as f64;
+    let min = (min_ms * 2_u32.pow(std::cmp::min(max_exponent, exponent))) as f64;
     (min + js_sys::Math::random() * min) as i32
 }
 
 // https://users.rust-lang.org/t/async-sleep-in-rust-wasm32/78218/4
-async fn sleep(delay_ms: i32) {
-    // let delay_ms = delay.millis() as i32;
+pub async fn sleep(delay_ms: i32) {
     let mut cb = |resolve: js_sys::Function, _reject: js_sys::Function| {
         web_sys::window()
             .unwrap()

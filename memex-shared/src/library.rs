@@ -10,6 +10,7 @@ pub use ids::*;
 use automerge::{
     self, ActorId, AutoCommit, ObjId, ObjId::Root, ObjType, ReadDoc, transaction::Transactable,
 };
+use tracing::info;
 
 /// for now, it only makes sense to have one Library
 /// in future, it will be possible for several users to share a Library, so useful for one User to have / belong to several Libraries
@@ -38,7 +39,6 @@ pub struct Tag {
     pub name: String,
 }
 
-
 impl Library {
     pub fn new(actor_id: ActorId) -> Self {
         let mut am = AutoCommit::new();
@@ -51,6 +51,7 @@ impl Library {
         am.set_actor(actor_id);
         am.update_diff_cursor(); // subscriber should never receive the changes above
         let id = LibraryId::random();
+        info!(?id, "new library");
         Library { id, replicated: am }
     }
 

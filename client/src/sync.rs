@@ -32,7 +32,7 @@ pub enum WebsocketBackoff {
 impl WebsocketBackoff {
     pub fn is_not_connected(&self) -> bool {
         match self {
-            WebsocketBackoff::Connected(_) => false,
+            WebsocketBackoff::Connected(ws) => ws.ready_state() > 1,
             WebsocketBackoff::Backoff(_) => true,
         }
     }
@@ -40,7 +40,13 @@ impl WebsocketBackoff {
 
 impl ServerSync {
     // spawns a long-lived task
-    pub fn start(url: String) -> (Sender<Message>, channel::Receiver<Message>, channel::Receiver<ConnStatus>) {
+    pub fn start(
+        url: String,
+    ) -> (
+        Sender<Message>,
+        channel::Receiver<Message>,
+        channel::Receiver<ConnStatus>,
+    ) {
         let (tx_up, mut rx_up) = Sender::new(3);
         let (tx_down, rx_down) = Sender::new(10);
         let (tx_c, rx_c) = Sender::new(3);
@@ -64,11 +70,41 @@ impl ServerSync {
     }
 
     async fn send(&mut self, message: Message) {
+        loop {
+            self.wait_ready().await;
+            match &self.ws {
+                WebsocketBackoff::Backoff(_) => self.connect().await,
+                WebsocketBackoff::Connected(ws) => {
+                    if let Err(e) = ws.send_with_u8_array(&message.encode()) {
+                        debug!(?e, "WS error in send");
+                        self.disconnected();
+                        self.connect().await
+                    } else {
+                        return; // successful send, done
+                    }
+                }
+            }
+        }
+    }
+
+    fn disconnected(&mut self) {
+        self.ws = WebsocketBackoff::Backoff(0);
+        self.tx_c.send(ConnStatus::Disconnected);
+    }
+
+    async fn wait_ready(&mut self) {
         if let WebsocketBackoff::Connected(ws) = &self.ws {
-            if ws.send_with_u8_array(&message.encode()).is_err() {
-                self.ws = WebsocketBackoff::Backoff(0);
-                self.tx_c.send(ConnStatus::Disconnected);
-                self.connect().await
+            loop {
+                match ws.ready_state() {
+                    0 => {
+                        connect::sleep(100).await;
+                    }
+                    1 => return,
+                    _ => {
+                        self.disconnected();
+                        return;
+                    }
+                }
             }
         }
     }
