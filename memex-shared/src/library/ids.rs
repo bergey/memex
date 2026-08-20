@@ -12,6 +12,8 @@ pub struct TagId(pub ObjId);
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct LibraryId(pub u128);
 
+// TODO this should probably be From / Into.  Anything left over should be a new Trait.
+// maybe also some newtype deriving, unless the traits are already derivable
 impl LibraryId {
     pub fn random() -> Self {
         let low = getrandom::u64().unwrap();
