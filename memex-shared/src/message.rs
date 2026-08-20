@@ -1,6 +1,7 @@
 mod automerge;
 
 use crate::library::LibraryId;
+use crate::user::AuthToken;
 
 use ::automerge::sync as am;
 use ciborium;
@@ -13,6 +14,7 @@ pub enum Message {
     Library(am::Message),
     #[serde(rename = "li")]
     LibraryId(LibraryId),
+    Authorize(AuthToken),
     // TODO future: user, sharing
 }
 

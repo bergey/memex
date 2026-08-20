@@ -107,8 +107,12 @@ async fn library_thread(
                         }
                     }
 
-                    LibraryId(_id) => {
-                        // TODO for now we only support one Library per user
+                    LibraryId(_id) => {// TODO
+                        warn!("for now we only support one Library per user");
+                    }
+
+                    Authorize(_) => {
+                        warn!("should only be sent from client to server")
                     }
                 }
             },

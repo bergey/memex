@@ -2,7 +2,7 @@ use crate::database;
 use crate::metrics;
 use crate::observability::hist_time_since;
 use crate::prelude::*;
-use memex_shared::{Library, LibraryId, Message};
+use memex_shared::{AuthToken, Library, LibraryId, Message};
 
 use automerge::sync::SyncDoc;
 use axum::{
@@ -25,6 +25,7 @@ struct Client {
     am: HashMap<LibraryId, automerge::sync::State>,
     library_out: Option<LibraryId>,
     library_in: Option<LibraryId>,
+    auth_token: Option<AuthToken>,
 }
 
 impl Client {
@@ -33,6 +34,7 @@ impl Client {
             am: HashMap::new(),
             library_out: None,
             library_in: None,
+            auth_token: None,
         }
     }
 
@@ -148,8 +150,7 @@ async fn apply_message_reply(
                 .ok_or_else(|| anyhow::anyhow!("sync message before Library ID set"))?;
             let am_state = client_state.get_am(id);
             let mut document =
-                database::apply_message(&database.postgres, id, am_state, am_msg)
-                    .await?;
+                database::apply_message(&database.postgres, id, am_state, am_msg).await?;
             let _ = BROADCAST.send(Library {
                 id,
                 replicated: document.clone(),
@@ -159,6 +160,10 @@ async fn apply_message_reply(
         }
         Message::LibraryId(id) => {
             client_state.library_in = Some(id);
+            Ok(None)
+        }
+        Message::Authorize(token) => {
+            client_state.auth_token = Some(token);
             Ok(None)
         }
     }
