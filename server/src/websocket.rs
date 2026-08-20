@@ -144,10 +144,21 @@ async fn apply_message_reply(
     let message =
         decode_message(ws_msg).inspect_err(|_| metrics::GARBAGE_MESSAGE_RECEIVED.inc())?;
     match message {
+        Message::Authorize(token) => {
+            client_state.auth_token = Some(token);
+            Ok(None)
+        }
+        Message::LibraryId(id) => {
+            client_state.library_in = Some(id);
+            Ok(None)
+        }
         Message::Library(am_msg) => {
             let id = client_state
                 .library_in
                 .ok_or_else(|| anyhow::anyhow!("sync message before Library ID set"))?;
+            if !authorized(database, client_state.auth_token, id).await? {
+                anyhow::bail!("not authorized")
+            }
             let am_state = client_state.get_am(id);
             let mut document =
                 database::apply_message(&database.postgres, id, am_state, am_msg).await?;
@@ -158,14 +169,6 @@ async fn apply_message_reply(
             let o_reply = document.sync().generate_sync_message(am_state);
             Ok(o_reply.map(|msg| (id, Message::Library(msg))))
         }
-        Message::LibraryId(id) => {
-            client_state.library_in = Some(id);
-            Ok(None)
-        }
-        Message::Authorize(token) => {
-            client_state.auth_token = Some(token);
-            Ok(None)
-        }
     }
 }
 
@@ -173,5 +176,20 @@ fn decode_message(ws_msg: ws::Message) -> anyhow::Result<Message> {
     match ws_msg {
         ws::Message::Binary(bytes) => Ok(Message::decode(bytes.as_ref())?),
         _ => Err(anyhow::anyhow!("expected binary WS message")),
+    }
+}
+
+// keep it simple, no caching
+// it's tempting to cache the expiration time, check access to a Library only on LibraryId message
+// but we will want to revoke tokens in other ways, and change Library permissions
+// so no caching until I'm prepared to design cache busting / broadcast changes
+async fn authorized(
+    database: &ConnectionPools,
+    o_auth: Option<AuthToken>,
+    library_id: LibraryId,
+) -> anyhow::Result<bool> {
+    match o_auth {
+        None => Ok(false),
+        Some(auth_token) => database::authorize(&database.postgres, auth_token, library_id).await,
     }
 }

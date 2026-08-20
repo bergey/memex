@@ -3,7 +3,8 @@ use automerge::{
     sync::{Message, SyncDoc},
 };
 use sqlx::*;
-use memex_shared::LibraryId;
+use sqlx::types::time::OffsetDateTime;
+use memex_shared::{AuthToken, LibraryId};
 
 // TODO rename before I add any more AM doc types
 pub async fn apply_message(
@@ -22,7 +23,6 @@ pub async fn apply_message(
     Ok(document)
 }
 
-// TODO shared ID type
 async fn read_library(
     transaction: &mut Transaction<'_, Postgres>,
     id: LibraryId,
@@ -49,4 +49,20 @@ on conflict (id) do update set value = $2",
     .execute(&mut **transaction)
     .await?;
     Ok(())
+}
+
+pub async fn authorize(
+    database: &PgPool,
+    auth_token: AuthToken,
+    library_id: LibraryId
+) -> anyhow::Result<bool> {
+    let mut transaction = database.begin().await?;
+    let expires = query_scalar!("select expires from auth_tokens join libraries on user_id = owner where auth_tokens.id = $1 and libraries.id = $2", auth_token.to_uuid(), library_id.to_uuid())
+        .fetch_optional(&mut *transaction)
+        .await?;
+    transaction.commit().await?;
+    match expires {
+        None => Ok(false),
+        Some(expires) => Ok(OffsetDateTime::now_utc() < expires)
+    }
 }
