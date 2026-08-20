@@ -4,10 +4,9 @@ use wasm_bindgen::JsCast;
 
 use web_sys::WebSocket;
 
-// TODO where do we need to wait for WS to finish connecting?
 impl super::ServerSync {
     pub async fn connect(&mut self) {
-        loop {
+        while let WebsocketBackoff::Backoff(exponent) = self.ws {
             match WebSocket::new(&self.url) {
                 Ok(ws) => {
                     info!(url = self.url, "connected WS");
@@ -15,28 +14,21 @@ impl super::ServerSync {
                     let cb = onmessage_callback(self.tx.clone());
                     ws.set_onmessage(Some(cb.as_ref().unchecked_ref()));
                     cb.forget();
-                    self.ws = WebsocketBackoff::Connected(ws);
+                    self.ws = WebsocketBackoff::Connected(ws.clone());
                     self.tx_c.send(ConnStatus::Connected);
+                    while ws.ready_state() == 0 {
+                        sleep(30).await;
+                    }
                 }
                 Err(err) => {
                     warn!(?err, "could not open websocket");
-                    if let WebsocketBackoff::Connected(_) = self.ws {
-                        self.ws = WebsocketBackoff::Backoff(1);
-                    }
+                    self.ws = WebsocketBackoff::Backoff(exponent + 1);
+                    // max_exponent ~ 68 minutes
+                    let timeout = exponential_backoff(500, exponent, 14);
+                    debug!(exponent, timeout, "sleeping");
+                    sleep(timeout).await;
                 }
             }
-            let exponent = match self.ws {
-                WebsocketBackoff::Backoff(exponent) => {
-                    self.ws = WebsocketBackoff::Backoff(exponent + 1);
-                    exponent
-                }
-                WebsocketBackoff::Connected(_) => {
-                    0
-                }
-            };
-            let timeout = exponential_backoff(500, exponent, 14);
-            debug!(exponent, timeout, "sleeping");
-            sleep(timeout).await;
         }
     }
 }

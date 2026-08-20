@@ -29,15 +29,6 @@ pub enum WebsocketBackoff {
     Backoff(u32),
 }
 
-impl WebsocketBackoff {
-    pub fn is_not_connected(&self) -> bool {
-        match self {
-            WebsocketBackoff::Connected(ws) => ws.ready_state() > 1,
-            WebsocketBackoff::Backoff(_) => true,
-        }
-    }
-}
-
 impl ServerSync {
     // spawns a long-lived task
     pub fn start(
@@ -62,27 +53,42 @@ impl ServerSync {
             handle.connect().await;
             loop {
                 let msg = rx_up.recv().await.expect("_up channel closed");
-                handle.send(msg).await;
+                handle.send(&msg).await;
             }
         });
 
         (tx_up, rx_down, rx_c)
     }
 
-    async fn send(&mut self, message: Message) {
-        loop {
-            self.wait_ready().await;
-            match &self.ws {
-                WebsocketBackoff::Backoff(_) => self.connect().await,
-                WebsocketBackoff::Connected(ws) => {
-                    if let Err(e) = ws.send_with_u8_array(&message.encode()) {
-                        debug!(?e, "WS error in send");
-                        self.disconnected();
-                        self.connect().await
-                    } else {
-                        return; // successful send, done
-                    }
+    // no retry limit, but exponential backoff via connect,
+    // and when the queue of messages to send fills up, we drop any further
+    // so if we finally connect before user restarts, we send the oldest messages,
+    // AM ensures sync
+    // maybe instead we should drop here if no WS, count on sync-all immediately after connect?
+    async fn send(&mut self, message: &Message) {
+        while !self.try_send(message) {
+            self.connect().await;
+        }
+    }
+
+    // true on success
+    fn try_send(&mut self, message: &Message) -> bool {
+        match &self.ws {
+            WebsocketBackoff::Backoff(_) => {
+                warn!("websocket backoff in send.  should not be reachable");
+                return false;
+            }
+            WebsocketBackoff::Connected(ws) => {
+                if ws.ready_state() > 1 {
+                    self.disconnected();
+                    return false;
                 }
+                if let Err(e) = ws.send_with_u8_array(&message.encode()) {
+                    debug!(?e, "WS error in send");
+                    self.disconnected();
+                    return false;
+                }
+                return true; // successful send, done
             }
         }
     }
@@ -90,23 +96,6 @@ impl ServerSync {
     fn disconnected(&mut self) {
         self.ws = WebsocketBackoff::Backoff(0);
         self.tx_c.send(ConnStatus::Disconnected);
-    }
-
-    async fn wait_ready(&mut self) {
-        if let WebsocketBackoff::Connected(ws) = &self.ws {
-            loop {
-                match ws.ready_state() {
-                    0 => {
-                        connect::sleep(100).await;
-                    }
-                    1 => return,
-                    _ => {
-                        self.disconnected();
-                        return;
-                    }
-                }
-            }
-        }
     }
 }
 

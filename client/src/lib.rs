@@ -107,8 +107,8 @@ async fn library_thread(
                         }
                     }
 
-                    LibraryId(id) => {
-                        // TODO
+                    LibraryId(_id) => {
+                        // TODO for now we only support one Library per user
                     }
                 }
             },
