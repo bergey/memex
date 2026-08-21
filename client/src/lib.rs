@@ -1,4 +1,5 @@
 mod actor;
+mod auth;
 mod disk;
 mod prelude;
 mod render;

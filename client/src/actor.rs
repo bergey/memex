@@ -5,8 +5,7 @@ use std::str::FromStr;
 
 // load stored actor or make one
 pub fn local_actor_id() -> ActorId {
-    let o_storage = web_sys::window().and_then(|w| w.local_storage().log_error().flatten());
-    match o_storage {
+    match local_storage() {
         None => ActorId::random(), // no storage,
         Some(storage) => {
             if let Some(id) = storage.get_item("actor_id").log_error().flatten().and_then(|s| ActorId::from_str(&s).log_error()) {

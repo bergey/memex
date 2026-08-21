@@ -1,16 +1,17 @@
-#[allow(unused_imports)]
-pub use anyhow::anyhow;
 pub use anyhow::Context;
 #[allow(unused_imports)]
-pub use tracing::{debug, error, info, warn};
-use std::fmt::{Debug, Display};
-use wasm_bindgen::prelude::*;
+pub use anyhow::anyhow;
 use futures::channel::mpsc;
 pub use memex_shared::errors::*;
+use std::fmt::{Debug, Display};
+#[allow(unused_imports)]
+pub use tracing::{debug, error, info, warn};
+use wasm_bindgen::prelude::*;
+use web_sys::Storage;
 
 #[derive(Debug)]
 pub struct MemexError(anyhow::Error);
-pub type Result<A, E=MemexError> = std::result::Result<A, E>;
+pub type Result<A, E = MemexError> = std::result::Result<A, E>;
 
 impl Display for MemexError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
@@ -47,8 +48,12 @@ impl<T: Debug> Sender<T> {
 
     pub fn send(&mut self, value: T) {
         match self.0.try_send(value) {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(cause) => warn!(?cause, "failed to enqueue message"),
         }
     }
+}
+
+pub fn local_storage() -> Option<Storage> {
+    web_sys::window().and_then(|w| w.local_storage().log_error().flatten())
 }
