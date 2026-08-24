@@ -1,12 +1,13 @@
 mod database;
 mod metrics;
 mod observability;
+mod passkeys;
 mod prelude;
 mod websocket;
 
 use prelude::*;
 
-use axum::routing::get;
+use axum::routing::{get, post};
 use sqlx::postgres::PgPoolOptions;
 
 #[macro_use]
@@ -25,6 +26,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let app = axum::Router::new()
         .route("/ws", get(websocket::ws_upgrade))
+        .route("/signup/start", get(passkeys::signup_start))
+        .route("/signup/finish", post(passkeys::signup_finish))
         .with_state(connection_pools);
     // TODO serve client code
 
