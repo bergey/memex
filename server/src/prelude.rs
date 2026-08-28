@@ -1,6 +1,6 @@
 use axum::extract::State;
-// use axum::http::StatusCode;
-// use axum::response::{IntoResponse, Response};
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
 pub use tracing::*;
 
@@ -13,28 +13,43 @@ pub struct ConnectionPools {
 
 // TODO trait to make State wrapper less intrusive?
 
-// maybe I will want this if I add endpoints beyond the Websocket?
 // https://github.com/tokio-rs/axum/blob/main/examples/anyhow-error-response/src/main.rs
-// pub struct Error {
-//     error: anyhow::Error,
-//     status_code: StatusCode,
-// }
+pub struct HttpError {
+    pub error: anyhow::Error,
+    pub status_code: StatusCode,
+}
 
-// impl IntoResponse for Error {
-//     fn into_response(self) -> Response {
-//         error!("{}", self.error);
-//         (self.status_code, format!("Something went wrong")).into_response()
-//     }
-// }
+pub type HttpResult<T> = std::result::Result<T, HttpError>;
 
-// impl<E> From<E> for Error
-// where
-//     E: Into<anyhow::Error>,
-// {
-//     fn from(err: E) -> Self {
-//         Self {
-//             error: err.into(),
-//             status_code: StatusCode::INTERNAL_SERVER_ERROR,
-//         }
-//     }
-// }
+impl IntoResponse for HttpError {
+    fn into_response(self) -> Response {
+        error!("{}", self.error);
+        (self.status_code, format!("Something went wrong")).into_response()
+    }
+}
+
+impl<E> From<E> for HttpError
+where
+    E: Into<anyhow::Error>,
+{
+    fn from(err: E) -> Self {
+        Self {
+            error: err.into(),
+            status_code: StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+}
+
+#[allow(dead_code)]
+pub trait WithStatus<T> {
+    fn with_status(self, status: StatusCode) -> HttpResult<T>;
+}
+
+impl<E: Into<anyhow::Error>, T> WithStatus<T> for std::result::Result<T, E> {
+    fn with_status(self, status_code: StatusCode) -> HttpResult<T> {
+        self.map_err(|e| HttpError {
+            error: e.into(),
+            status_code,
+        })
+    }
+}
