@@ -2,8 +2,16 @@ use memex_shared::UserId;
 
 use sqlx::*;
 
-
 pub async fn user_id_internal(
+    transaction: &mut Transaction<'_, Postgres>,
+    user_id: UserId,
+) -> anyhow::Result<i32> {
+    try_user_id_internal(transaction, user_id)
+        .await?
+        .ok_or(anyhow::anyhow!("user not found"))
+}
+
+pub async fn try_user_id_internal(
     transaction: &mut Transaction<'_, Postgres>,
     user_id: UserId,
 ) -> Result<Option<i32>> {

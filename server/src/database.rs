@@ -77,9 +77,7 @@ pub async fn save_auth_token(
     auth_token: AuthToken,
     user_id: UserId,
 ) -> anyhow::Result<()> {
-    let user_internal = users::user_id_internal(transaction, user_id)
-        .await?
-        .ok_or(anyhow::anyhow!("user not found"))?;
+    let user_internal = users::user_id_internal(transaction, user_id).await?;
     query!(
         "insert into auth_tokens (id, user_id, expires) values ($1, $2, now() + interval '5m')",
         auth_token.to_uuid(),

@@ -13,16 +13,11 @@ pub async fn save_passkey_registration(
     let challenge = reg.challenge();
     let mut encoded = Vec::new();
     ciborium::into_writer(&reg, &mut encoded)?;
-    let user_id_internal = query_scalar!(
-        "select id from users where external_id = $1",
-        user_id.to_uuid()
-    )
-    .fetch_optional(&mut **transaction)
-    .await?;
+    let user_internal = user_id_internal(transaction, user_id).await?;
     let _ = query!(
         "insert into passkey_challenges (challenge, user_id, state) values ($1, $2, $3)",
         challenge,
-        user_id_internal,
+        user_internal,
         encoded
     )
     .execute(&mut **transaction)
