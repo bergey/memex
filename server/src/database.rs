@@ -81,3 +81,21 @@ pub async fn user_id_internal(
     .fetch_optional(&mut **transaction)
     .await
 }
+
+pub async fn save_auth_token(
+    transaction: &mut PgTransaction<'_>,
+    auth_token: AuthToken,
+    user_id: UserId,
+) -> anyhow::Result<()> {
+    let user_internal = user_id_internal(transaction, user_id)
+        .await?
+        .ok_or(anyhow::anyhow!("user not found"))?;
+    query!(
+        "insert into auth_tokens (id, user_id, expires) values ($1, $2, now() + interval '5m')",
+        auth_token.to_uuid(),
+        user_internal
+    )
+    .execute(&mut **transaction)
+    .await?;
+    Ok(())
+}

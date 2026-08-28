@@ -45,7 +45,7 @@ pub async fn signup_finish(
     let passkey = WEBAUTHN.finish_passkey_registration(&body.0, &reg)?;
     save_passkey(&mut transaction, &passkey, user_id).await?; // delete registration
     let auth_token = AuthToken::random();
-    // save_auth_token(&mut transaction, auth_token).await?;
+    save_auth_token(&mut transaction, auth_token, user_id).await?;
     transaction.commit().await?;
     Ok(Json(auth_token))
 }
