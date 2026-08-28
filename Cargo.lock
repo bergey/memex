@@ -300,6 +300,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "axum-macros"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7aa268c23bfbbd2c4363b9cd302a4f504fb2a9dfe7e3451d66f35dd392e20aca"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
+
+[[package]]
 name = "base16"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -326,8 +337,6 @@ checksum = "ac07cdecf99051d9a5238b80f35af32cdeba5b336e55d957b318b50137e18da5"
 [[package]]
 name = "base64urlsafedata"
 version = "0.5.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b08e33815c87d8cadcddb1e74ac307368a3751fbe40c961538afa21a1899f21c"
 dependencies = [
  "base64 0.21.7",
  "pastey",
@@ -2802,6 +2811,8 @@ dependencies = [
  "anyhow",
  "automerge",
  "axum",
+ "axum-macros",
+ "ciborium",
  "lazy_static",
  "memex-shared",
  "openssl",
@@ -2812,6 +2823,7 @@ dependencies = [
  "tracing-subscriber",
  "uuid",
  "webauthn-rs",
+ "webauthn-rs-core",
 ]
 
 [[package]]
@@ -3904,8 +3916,6 @@ dependencies = [
 [[package]]
 name = "webauthn-attestation-ca"
 version = "0.5.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6475c0bbd1a3f04afaa3e98880408c5be61680c5e6bd3c6f8c250990d5d3e18e"
 dependencies = [
  "base64urlsafedata",
  "openssl",
@@ -3918,8 +3928,6 @@ dependencies = [
 [[package]]
 name = "webauthn-rs"
 version = "0.5.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c548915e0e92ee946bbf2aecf01ea21bef53d974b0793cc6732ba81a03fc422"
 dependencies = [
  "base64urlsafedata",
  "serde",
@@ -3932,8 +3940,6 @@ dependencies = [
 [[package]]
 name = "webauthn-rs-core"
 version = "0.5.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "296d2d501feb715d80b8e186fb88bab1073bca17f460303a1013d17b673bea6a"
 dependencies = [
  "base64 0.21.7",
  "base64urlsafedata",
@@ -3959,8 +3965,6 @@ dependencies = [
 [[package]]
 name = "webauthn-rs-proto"
 version = "0.5.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c37393beac9c1ed1ca6dbb30b1e01783fb316ab3a45d90ecd48c99052dd7ef1e"
 dependencies = [
  "base64 0.21.7",
  "base64urlsafedata",

@@ -1,10 +1,12 @@
+use memex_shared::*;
+
 use automerge::{
     AutoCommit,
     sync::{Message, SyncDoc},
 };
-use sqlx::*;
-use sqlx::types::time::OffsetDateTime;
 use memex_shared::{AuthToken, LibraryId};
+use sqlx::types::time::OffsetDateTime;
+use sqlx::*;
 
 // TODO rename before I add any more AM doc types
 pub async fn apply_message(
@@ -27,9 +29,10 @@ async fn read_library(
     transaction: &mut Transaction<'_, Postgres>,
     id: LibraryId,
 ) -> anyhow::Result<Option<AutoCommit>> {
-    let row: Option<Vec<u8>> = query_scalar!("select value from libraries where id = $1", id.to_uuid())
-        .fetch_optional(&mut **transaction)
-        .await?;
+    let row: Option<Vec<u8>> =
+        query_scalar!("select value from libraries where id = $1", id.to_uuid())
+            .fetch_optional(&mut **transaction)
+            .await?;
 
     Ok(row.and_then(|bytes: Vec<u8>| AutoCommit::load(bytes.as_ref()).ok()))
 }
@@ -54,7 +57,7 @@ on conflict (id) do update set value = $2",
 pub async fn authorize(
     database: &PgPool,
     auth_token: AuthToken,
-    library_id: LibraryId
+    library_id: LibraryId,
 ) -> anyhow::Result<bool> {
     let mut transaction = database.begin().await?;
     let expires = query_scalar!("select expires from auth_tokens join libraries on user_id = owner where auth_tokens.id = $1 and libraries.id = $2", auth_token.to_uuid(), library_id.to_uuid())
@@ -63,6 +66,18 @@ pub async fn authorize(
     transaction.commit().await?;
     match expires {
         None => Ok(false),
-        Some(expires) => Ok(OffsetDateTime::now_utc() < expires)
+        Some(expires) => Ok(OffsetDateTime::now_utc() < expires),
     }
+}
+
+pub async fn user_id_internal(
+    transaction: &mut Transaction<'_, Postgres>,
+    user_id: UserId,
+) -> Result<Option<i32>> {
+    query_scalar!(
+        "select id from users where external_id = $1",
+        user_id.to_uuid()
+    )
+    .fetch_optional(&mut **transaction)
+    .await
 }
