@@ -16,6 +16,7 @@ pub fn save_library(library: &mut Library) {
     spawn_local(save_bytes(library.id, bytes));
 }
 
+#[allow(dead_code)]
 pub async fn load_library(id: LibraryId) -> Library {
     try_load(id)
         .await
@@ -37,6 +38,7 @@ fn decode_library(id: LibraryId, jsv: JsValue) -> Option<Library> {
         })
 }
 
+#[allow(dead_code)]
 async fn try_load(id: LibraryId) -> OpenDbResult<JsValue> {
     let db = open_database().await?;
     let transaction = db

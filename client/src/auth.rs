@@ -9,11 +9,13 @@ pub fn load_auth_token() -> Option<AuthToken> {
     AuthToken::from_str(s.as_ref())
 }
 
+#[allow(dead_code)]
 pub fn save_auth_token(_auth_token: AuthToken) {
     panic!("not implemented");
 }
 
 // where should User ID / name come from?
+#[allow(dead_code)]
 pub fn request_auth_token() -> Result<AuthToken> {
     panic!("not implemented");
 }
