@@ -3,7 +3,7 @@ use crate::prelude::*;
 use memex_shared::*;
 
 use anyhow::Result;
-use axum::{Json, extract::State};
+use axum::{Json, extract::State, http::StatusCode};
 use sqlx::*;
 use webauthn_rs::prelude::*;
 
@@ -17,14 +17,12 @@ lazy_static! {
 }
 
 /// new User, no prior credentials
-#[debug_handler]
-pub async fn signup_start(State(pools): Pools) -> Result<Json<CreationChallengeResponse>> {
+pub async fn signup_start(State(pools): Pools) -> HttpResult<Json<CreationChallengeResponse>> {
     let mut transaction = pools.postgres.begin().await?;
     let user_id = create_user(&mut transaction).await?;
     let (to_client, server_secret) =
         WEBAUTHN.start_passkey_registration(user_id.to_uuid(), "", "", None)?;
     save_passkey_registration(&mut transaction, server_secret, user_id).await?;
-    // TODO persist secret
     transaction.commit().await?;
     Ok(Json(to_client))
 }
@@ -32,21 +30,24 @@ pub async fn signup_start(State(pools): Pools) -> Result<Json<CreationChallengeR
 pub async fn signup_finish(
     State(db): Pools,
     body: Json<RegisterPublicKeyCredential>,
-) -> anyhow::Result<AuthToken> {
+) -> HttpResult<Json<AuthToken>> {
     let attestation: AuthenticatorAttestationResponse<webauthn_rs_core::Registration> =
         AuthenticatorAttestationResponse::try_from(&body.0.response)?;
     let challenge = attestation.challenge();
     let mut transaction = db.postgres.begin().await?;
     let o_reg = read_passkey_registration(&mut transaction, &challenge).await?;
     match o_reg {
-        None => anyhow::bail!("TODO: 409"),
+        None => Err(HttpError {
+            error: anyhow::anyhow!("registration not found or expired"),
+            status_code: StatusCode::CONFLICT,
+        }),
         Some((reg, user_id)) => {
             let passkey = WEBAUTHN.finish_passkey_registration(&body.0, &reg)?;
             save_passkey(&mut transaction, &passkey, user_id).await?; // delete registration
             let auth_token = AuthToken::random();
             // save_auth_token(&mut transaction, auth_token).await?;
             transaction.commit().await?;
-            Ok(auth_token)
+            Ok(Json(auth_token))
         }
     }
 }
