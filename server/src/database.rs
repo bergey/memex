@@ -1,3 +1,5 @@
+pub mod users;
+
 use memex_shared::*;
 
 use automerge::{
@@ -70,24 +72,12 @@ pub async fn authorize(
     }
 }
 
-pub async fn user_id_internal(
-    transaction: &mut Transaction<'_, Postgres>,
-    user_id: UserId,
-) -> Result<Option<i32>> {
-    query_scalar!(
-        "select id from users where external_id = $1",
-        user_id.to_uuid()
-    )
-    .fetch_optional(&mut **transaction)
-    .await
-}
-
 pub async fn save_auth_token(
     transaction: &mut PgTransaction<'_>,
     auth_token: AuthToken,
     user_id: UserId,
 ) -> anyhow::Result<()> {
-    let user_internal = user_id_internal(transaction, user_id)
+    let user_internal = users::user_id_internal(transaction, user_id)
         .await?
         .ok_or(anyhow::anyhow!("user not found"))?;
     query!(
