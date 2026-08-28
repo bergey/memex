@@ -28,6 +28,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .route("/ws", get(websocket::ws_upgrade))
         .route("/signup/start", get(passkeys::signup_start))
         .route("/signup/finish", post(passkeys::signup_finish))
+        .route("/login/{user_id}/start", get(passkeys::login_start))
         .with_state(connection_pools);
     // TODO serve client code
 

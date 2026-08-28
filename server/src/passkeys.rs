@@ -1,11 +1,15 @@
 mod database;
 
-use crate::database::*;
+use crate::database::save_auth_token;
 use crate::database::users::*;
 use crate::prelude::*;
 use memex_shared::*;
 
-use axum::{Json, extract::State, http::StatusCode};
+use axum::{
+    Json,
+    extract::{Path, State},
+    http::StatusCode,
+};
 use webauthn_rs::prelude::*;
 
 lazy_static! {
@@ -49,4 +53,17 @@ pub async fn signup_finish(
     save_auth_token(&mut transaction, auth_token, user_id).await?;
     transaction.commit().await?;
     Ok(Json(auth_token))
+}
+
+/// login on a device that has a passkey
+pub async fn login_start(
+    State(pools): Pools,
+    Path(user_id): Path<UserId>,
+) -> HttpResult<Json<RequestChallengeResponse>> {
+    let mut transaction = pools.postgres.begin().await?;
+    let passkeys = database::read_passkeys(&mut transaction, user_id).await?;
+    let (to_client, server_secret) = WEBAUTHN.start_passkey_authentication(&passkeys)?;
+    database::save_passkey_authentication(&mut transaction, server_secret, user_id).await?;
+    transaction.commit().await?;
+    Ok(Json(to_client))
 }
