@@ -51,7 +51,7 @@ pub async fn signup_finish(
 }
 
 async fn save_passkey_registration(
-    transaction: &mut Transaction<'_, Postgres>,
+    transaction: &mut PgTransaction<'_>,
     reg: PasskeyRegistration,
     user_id: UserId,
 ) -> Result<()> {
@@ -76,7 +76,7 @@ async fn save_passkey_registration(
 }
 
 async fn save_passkey(
-    transaction: &mut Transaction<'_, Postgres>,
+    transaction: &mut PgTransaction<'_>,
     passkey: &Passkey,
     user_id: UserId,
 ) -> Result<()> {
@@ -93,7 +93,7 @@ async fn save_passkey(
     Ok(())
 }
 
-async fn create_user(transaction: &mut Transaction<'_, Postgres>) -> Result<UserId> {
+async fn create_user(transaction: &mut PgTransaction<'_>) -> Result<UserId> {
     let user_id = UserId::random();
     query!(
         "insert into users (external_id) values ($1)",
