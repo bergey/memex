@@ -8,6 +8,7 @@ use sqlx::*;
 use webauthn_rs::prelude::*;
 
 lazy_static! {
+    // TODO env vars
     static ref WEBAUTHN: Webauthn = {
         let rp_id = "teallabs.org";
         let rp_origin = Url::parse("https://teallabs.org").expect("Invalid URL");
@@ -35,21 +36,18 @@ pub async fn signup_finish(
         AuthenticatorAttestationResponse::try_from(&body.0.response)?;
     let challenge = attestation.challenge();
     let mut transaction = db.postgres.begin().await?;
-    let o_reg = read_passkey_registration(&mut transaction, &challenge).await?;
-    match o_reg {
-        None => Err(HttpError {
+    let (reg, user_id) = read_passkey_registration(&mut transaction, &challenge)
+        .await?
+        .ok_or(HttpError {
             error: anyhow::anyhow!("registration not found or expired"),
             status_code: StatusCode::CONFLICT,
-        }),
-        Some((reg, user_id)) => {
-            let passkey = WEBAUTHN.finish_passkey_registration(&body.0, &reg)?;
-            save_passkey(&mut transaction, &passkey, user_id).await?; // delete registration
-            let auth_token = AuthToken::random();
-            // save_auth_token(&mut transaction, auth_token).await?;
-            transaction.commit().await?;
-            Ok(Json(auth_token))
-        }
-    }
+        })?;
+    let passkey = WEBAUTHN.finish_passkey_registration(&body.0, &reg)?;
+    save_passkey(&mut transaction, &passkey, user_id).await?; // delete registration
+    let auth_token = AuthToken::random();
+    // save_auth_token(&mut transaction, auth_token).await?;
+    transaction.commit().await?;
+    Ok(Json(auth_token))
 }
 
 async fn save_passkey_registration(
