@@ -67,3 +67,27 @@ pub async fn login_start(
     transaction.commit().await?;
     Ok(Json(to_client))
 }
+
+pub async fn login_finish(
+    State(db): Pools,
+    body: Json<PublicKeyCredential>,
+) -> HttpResult<Json<AuthToken>> {
+    let attestation: AuthenticatorAssertionResponse<webauthn_rs_core::Authentication> =
+        AuthenticatorAssertionResponse::try_from(&body.0.response)?;
+    let challenge = attestation.challenge();
+    let mut transaction = db.postgres.begin().await?;
+
+    let (pka, user_id) = database::read_passkey_authentication(&mut transaction, &challenge)
+        .await?
+        .ok_or(HttpError {
+            error: anyhow::anyhow!("registration not found or expired"),
+            status_code: StatusCode::CONFLICT,
+        })?;
+    let _auth_info = WEBAUTHN.finish_passkey_authentication(&body.0, &pka)?;
+    // TODO check signature counter?
+
+    let auth_token = AuthToken::random();
+    save_auth_token(&mut transaction, auth_token, user_id).await?;
+    transaction.commit().await?;
+    Ok(Json(auth_token))
+}

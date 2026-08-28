@@ -104,3 +104,25 @@ pub async fn save_passkey_authentication(
     .await?;
     Ok(())
 }
+
+pub async fn read_passkey_authentication(
+    transaction: &mut PgTransaction<'_>,
+    challenge: &[u8],
+) -> Result<Option<(PasskeyAuthentication, UserId)>> {
+    let o_row = query!(
+        "select users.external_id, state \
+        from passkey_challenges join users on users.id = user_id \
+        where challenge = $1 and expires > now()",
+        challenge
+    )
+    .fetch_optional(&mut **transaction)
+    .await?;
+    match o_row {
+        None => Ok(None),
+        Some(row) => {
+            let user_id = UserId::from_uuid(&row.external_id);
+            let pka = ciborium::from_reader::<PasskeyAuthentication, &[u8]>(row.state.as_ref())?;
+            Ok(Some((pka, user_id)))
+        }
+    }
+}
