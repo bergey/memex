@@ -50,7 +50,8 @@ impl Library {
         am.put_object(Root, "records", ObjType::List).unwrap();
         am.set_actor(actor_id);
         am.update_diff_cursor(); // subscriber should never receive the changes above
-        let id = LibraryId::random();
+        // TODO random ID again once I sort out first login on second device
+        let id = LibraryId(0);
         info!(?id, "new library");
         Library { id, replicated: am }
     }
