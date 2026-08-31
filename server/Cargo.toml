@@ -9,15 +9,15 @@ memex-shared = { path = "../memex-shared" }
 anyhow.workspace = true
 automerge.workspace = true
 axum = { version = "0.8.9", features = ["ws"] }
+axum-macros = "0.5.1"
+ciborium.workspace = true
 lazy_static = "1.5.0"
 openssl = { version = "0.10", features = ["vendored"] }
 prometheus = "0.14.0"
-sqlx = { version = "0.9.0", features = ["postgres", "runtime-tokio", "tls-rustls", "bigdecimal", "uuid", "time", "migrate", "macros"] }
-tokio = { version = "1.52.3", features = ["full"] }
-tracing = "0.1.44"
+sqlx = { workspace = true, features = ["postgres", "runtime-tokio", "tls-rustls", "bigdecimal", "uuid", "time", "migrate", "macros"] }
+tokio = { workspace = true, features = ["full"] }
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt", "json"] }
-uuid = "1.24.0"
+tracing.workspace = true
+uuid.workspace = true
 webauthn-rs = { path = "../../../build/webauthn-rs/webauthn-rs/", features = ["danger-allow-state-serialisation"] }
 webauthn-rs-core = { path = "../../../build/webauthn-rs/webauthn-rs-core/" }
-axum-macros = "0.5.1"
-ciborium = "0.2.2"

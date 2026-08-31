@@ -1928,6 +1928,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "memex-query"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "winnow",
+]
+
+[[package]]
 name = "memex-shared"
 version = "0.1.0"
 dependencies = [
