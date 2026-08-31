@@ -1,4 +1,4 @@
-default: (wasm "dev") parcel serve
+default: (wasm "dev") parcel-dev serve
 
 [working-directory: 'dist']
 serve:
@@ -7,11 +7,11 @@ serve:
 wasm profile:
     wasm-pack build --target web --out-dir {{wasm_dir}} --no-typescript --{{profile}} --no-pack
 
-parcel:
-    pnpm parcel build public/index.html --public-url /memex/
+parcel-dev:
+    pnpm parcel build public/index.html
 
-install path:
-    cp -r dist {{path}}
+parcel-release:
+    pnpm parcel build public/index.html --public-url /memex/
 
 websocket path='':
     sed -e 's_"ws://localhost:3036/ws"_"{{path}}"_' dist/public*.js -i
@@ -27,6 +27,6 @@ clean-all: clean
     rm -rf .parcel-cache
 
 # allow preview before deploy
-release: clean-all (wasm "release") parcel (websocket "wss://austenite.moray-palermo.ts.net/memex/api/ws")
+release: clean-all (wasm "release") parcel-release (websocket "wss://austenite.moray-palermo.ts.net/memex/api/ws")
 
 wasm_dir := ".wasm_pack"
