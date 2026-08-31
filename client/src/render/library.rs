@@ -9,6 +9,7 @@ impl ReactiveLibrary {
         ReactiveLibrary {
             name: RwSignal::new(library.name()),
             selected: RwSignal::new(None),
+            search: RwSignal::new("".to_string()),
             records: RwSignal::new(
                 library
                     .records()

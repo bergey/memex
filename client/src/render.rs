@@ -18,14 +18,9 @@ pub fn body(reactive: ReactiveLibrary, tx: Sender<Action>) -> impl IntoView {
 
 fn search() -> impl IntoView {
     view! {
-        <section id="search">
+        <section id="searches">
             <h1>Search</h1>
-            <menu>
-                <li>Craft</li>
-                <li>Science</li>
-                <li>Society</li>
-                <li>Software</li>
-            </menu>
+            <input id="search" />
         </section>
     }
 }
@@ -35,6 +30,7 @@ pub struct ReactiveLibrary {
     name: RwSignal<String>,
     records: RwSignal<Vec<Record>>, // Map RecordId Record ?  (removing ID from Record)
     selected: RwSignal<Option<Record>>,
+    search: RwSignal<String>,
 }
 
 // TODO decide whether leptos Stores are ready; eliminate this boilerplate
