@@ -2,6 +2,7 @@ pub mod query;
 use query::{Operator, Query};
 
 use std::collections::{HashMap, HashSet};
+use std::hash::Hash;
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy, Hash)]
 pub struct TagId(pub usize);
@@ -47,13 +48,16 @@ impl AllTags {
     }
 }
 
-pub fn match_tags(query: &Query<TagId>, item_tags: &Tags) -> bool {
+pub fn match_tags<T>(query: &Query<T>, item_tags: &HashSet<T>) -> bool
+where
+    T: Eq + Hash,
+{
     match query {
         Query::Tag(t) => item_tags.contains(t),
         Query::Only(ts) => item_tags.is_subset(ts),
         Query::Function(Operator::And, args) => args.iter().all(|q| match_tags(q, item_tags)),
         Query::Function(Operator::Or, args) => args.iter().any(|q| match_tags(q, item_tags)),
-        Query::Not(q) => !match_tags(q, item_tags)
+        Query::Not(q) => !match_tags(q, item_tags),
     }
 }
 
