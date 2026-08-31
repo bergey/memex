@@ -12,17 +12,42 @@ pub fn list_section(library: super::ReactiveLibrary, tx: Sender<Action>) -> impl
         move || selected.get().map(|r| r.id)
     };
     section().id("list").child((
-        div().class("menu").child((
-            button()
-                .on(event::click, move |_| {
-                    library_add_button.send(Action::AddRecord(()));
-                })
-                .child("Add"),
-        )),
+        div().class("menu").child((button()
+            .on(event::click, move |_| {
+                library_add_button.send(Action::AddRecord(()));
+            })
+            .child("Add"),)),
         table().child((
             thead().child(tr().child((th().child("Title"), th().child("Author")))),
             For(ForProps {
-                each: move || library.records.get(),
+                // each: move || library.records.get(),
+                each: move || {
+                    let search = library.search.get();
+                    if search.is_empty() {
+                        library.records.get()
+                    } else {
+                        library.records.with(|records| {
+                            let mut ret = Vec::new();
+                            for r in records {
+                                r.tags.with(|tags| {
+                                    let mut found = false;
+                                    for t in tags {
+                                        t.name.with(|name| {
+                                            if name == &search {
+                                                ret.push(r.clone());
+                                                found = true;
+                                            }
+                                        });
+                                        if found {
+                                            break;
+                                        }
+                                    }
+                                })
+                            }
+                            ret
+                        })
+                    }
+                },
                 key: |record| record.id.clone(),
                 children: move |record| {
                     let library = library.clone();
@@ -32,11 +57,11 @@ pub fn list_section(library: super::ReactiveLibrary, tx: Sender<Action>) -> impl
                             library.selected.set(Some(record.clone()));
                         }
                     })
-                        .class(("selected", {
-                            let id = Some(record.id.clone());
-                            let selected_id = selected_id.clone();
-                            move || id == selected_id()
-                        }))
+                    .class(("selected", {
+                        let id = Some(record.id.clone());
+                        let selected_id = selected_id.clone();
+                        move || id == selected_id()
+                    }))
                     .child((
                         td().child(move || record.title.get()),
                         td().child(move || record.author.get()),

@@ -10,19 +10,17 @@ use leptos::prelude::*;
 
 pub fn body(reactive: ReactiveLibrary, tx: Sender<Action>) -> impl IntoView {
     (
-        search(),
+        search(reactive.clone()),
         list::list_section(reactive.clone(), tx.clone()),
         details::details(tx, reactive.selected),
     )
 }
 
-fn search() -> impl IntoView {
-    view! {
-        <section id="searches">
-            <h1>Search</h1>
-            <input id="search" />
-        </section>
-    }
+fn search(library: ReactiveLibrary) -> impl IntoView {
+    section().id("searches").child((
+        h1().child("Search"),
+        input().bind(leptos::attr::Value, library.search)
+    ))
 }
 
 #[derive(Clone, Debug)]
