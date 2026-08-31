@@ -34,7 +34,7 @@ async fn read_library(
     let row: Option<Vec<u8>> =
         query_scalar!("select value from libraries where id = $1", id.to_uuid())
             .fetch_optional(&mut **transaction)
-            .await?;
+            .await?.flatten(); // TODO null value should be eq new empty Library?
 
     Ok(row.and_then(|bytes: Vec<u8>| AutoCommit::load(bytes.as_ref()).ok()))
 }
