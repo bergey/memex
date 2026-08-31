@@ -7,7 +7,6 @@ use memex_query::*;
 use leptos::html::*;
 use leptos::prelude::*;
 use leptos::tachys::html::event;
-use std::collections::HashSet;
 
 pub fn list_section(library: super::ReactiveLibrary, tx: Sender<Action>) -> impl IntoView {
     let mut library_add_button = tx.clone();
@@ -64,19 +63,11 @@ fn filter_library(query: Query<String>, records: &RwSignal<Vec<Record>>) -> Vec<
     let mut ret = Vec::new();
     records.with(|records| {
         for r in records {
-            // TODO don't rebuild this set every time the query changes
-            let mut tag_set = HashSet::new();
-            r.tags.with(|tags| {
-                for t in tags {
-                    let name = t.name.get();
-                    if !name.is_empty() {
-                        tag_set.insert(name);
-                    }
+            r.tag_set.with(|tag_set| {
+                if match_tags(&query, &tag_set) {
+                    ret.push(r.clone());
                 }
-            });
-            if match_tags(&query, &tag_set) {
-                ret.push(r.clone());
-            }
+            })
         }
     });
     ret

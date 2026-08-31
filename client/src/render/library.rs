@@ -3,6 +3,7 @@ use crate::prelude::*;
 use memex_shared::library::{self, Library, RecordId, action::Event};
 
 use leptos::prelude::*;
+use std::collections::HashSet;
 
 impl ReactiveLibrary {
     pub fn from_replicated(library: &Library) -> ReactiveLibrary {
@@ -13,16 +14,8 @@ impl ReactiveLibrary {
             records: RwSignal::new(
                 library
                     .records()
-                    .map(|record| Record {
-                        id: record.id,
-                        title: RwSignal::new(record.title),
-                        author: RwSignal::new(record.author),
-                        url: RwSignal::new(record.url),
-                        typ: RwSignal::new(record.typ),
-                        date: RwSignal::new(record.date.to_string()),
-                        date_added: RwSignal::new(record.date_added.to_string()),
-                        read_last: RwSignal::new(record.read_last.to_string()),
-                        tags: RwSignal::new(
+                    .map(|record| {
+                        let tags = RwSignal::new(
                             record
                                 .tags
                                 .into_iter()
@@ -31,7 +24,19 @@ impl ReactiveLibrary {
                                     name: RwSignal::new(name),
                                 })
                                 .collect(),
-                        ),
+                        );
+                        Record {
+                            id: record.id,
+                            title: RwSignal::new(record.title),
+                            author: RwSignal::new(record.author),
+                            url: RwSignal::new(record.url),
+                            typ: RwSignal::new(record.typ),
+                            date: RwSignal::new(record.date.to_string()),
+                            date_added: RwSignal::new(record.date_added.to_string()),
+                            read_last: RwSignal::new(record.read_last.to_string()),
+                            tags,
+                            tag_set: tag_set_from_vec(tags),
+                        }
                     })
                     .collect(),
             ),
@@ -47,6 +52,7 @@ impl ReactiveLibrary {
             }
 
             AddRecord((ix, r_id)) => self.records.update(|rs| {
+                let tags = RwSignal::new(Vec::new());
                 rs.insert(
                     ix,
                     Record {
@@ -58,7 +64,8 @@ impl ReactiveLibrary {
                         date: RwSignal::new(Default::default()),
                         date_added: RwSignal::new(Default::default()),
                         read_last: RwSignal::new(Default::default()),
-                        tags: RwSignal::new(Vec::new()),
+                        tags,
+                        tag_set: tag_set_from_vec(tags),
                     },
                 );
             }),
@@ -131,4 +138,19 @@ impl ReactiveLibrary {
         });
         ret
     }
+}
+
+fn tag_set_from_vec(tags: RwSignal<Vec<Tag>>) -> Memo<HashSet<String>> {
+    Memo::new(move |_| {
+        let mut ret = HashSet::new();
+        tags.with(|tags| {
+            for t in tags {
+                let name = t.name.get();
+                if !name.is_empty() {
+                    ret.insert(name);
+                }
+            }
+        });
+        ret
+    })
 }

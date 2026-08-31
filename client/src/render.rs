@@ -7,6 +7,7 @@ use memex_shared::library::{RecordId, TagId, action::Action};
 
 use leptos::html::*;
 use leptos::prelude::*;
+use std::collections::HashSet;
 
 pub fn body(reactive: ReactiveLibrary, tx: Sender<Action>) -> impl IntoView {
     (
@@ -19,7 +20,7 @@ pub fn body(reactive: ReactiveLibrary, tx: Sender<Action>) -> impl IntoView {
 fn search(library: ReactiveLibrary) -> impl IntoView {
     section().id("searches").child((
         h1().child("Search"),
-        input().bind(leptos::attr::Value, library.search)
+        input().bind(leptos::attr::Value, library.search),
     ))
 }
 
@@ -44,6 +45,7 @@ struct Record {
     date_added: RwSignal<String>,
     read_last: RwSignal<String>,
     tags: RwSignal<Vec<Tag>>,
+    tag_set: Memo<HashSet<String>>,
 }
 
 #[derive(Clone, Debug)]
