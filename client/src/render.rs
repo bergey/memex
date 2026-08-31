@@ -20,6 +20,7 @@ pub fn body(reactive: ReactiveLibrary, tx: Sender<Action>) -> impl IntoView {
 fn search(library: ReactiveLibrary) -> impl IntoView {
     section().id("searches").child((
         h1().child("Search"),
+        // TODO inidate when search term is invalid / results are out of date
         input().bind(leptos::attr::Value, library.search),
     ))
 }
@@ -34,7 +35,7 @@ pub struct ReactiveLibrary {
 
 // TODO decide whether leptos Stores are ready; eliminate this boilerplate
 // https://book.leptos.dev/view/04b_iteration.html#option-4-stores
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 struct Record {
     id: RecordId,
     title: RwSignal<String>,

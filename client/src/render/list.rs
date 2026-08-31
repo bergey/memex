@@ -14,6 +14,20 @@ pub fn list_section(library: super::ReactiveLibrary, tx: Sender<Action>) -> impl
         let selected = library.selected.clone();
         move || selected.get().map(|r| r.id)
     };
+    let filtered = Memo::new(move |old| {
+        let search = library.search.get();
+        if search.is_empty() {
+            library.records.get()
+        } else {
+            match parse_query(&*search) {
+                Err(e) => {
+                    warn!("valid prefix of search: {e}");
+                    old.cloned().unwrap_or_else(|| library.records.get())
+                }
+                Ok(query) => filter_library(query, &library.records),
+            }
+        }
+    });
     section().id("list").child((
         div().class("menu").child((button()
             .on(event::click, move |_| {
@@ -23,18 +37,7 @@ pub fn list_section(library: super::ReactiveLibrary, tx: Sender<Action>) -> impl
         table().child((
             thead().child(tr().child((th().child("Title"), th().child("Author")))),
             For(ForProps {
-                // each: move || library.records.get(),
-                each: move || {
-                    let search = library.search.get();
-                    match parse_query(&*search) {
-                        Err(e) => {
-                            warn!("{e}");
-                            library.records.get()
-                        }
-                        // TODO memoize, handle invalid queries
-                        Ok(query) => filter_library(query, &library.records),
-                    }
-                },
+                each: move || filtered.get(),
                 key: |record| record.id.clone(),
                 children: move |record| {
                     let library = library.clone();
