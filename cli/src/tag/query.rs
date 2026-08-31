@@ -4,6 +4,7 @@ use std::hash::Hash;
 use winnow::combinator::{alt, delimited, opt, separated, terminated};
 use winnow::prelude::*;
 use winnow::token::*;
+use winnow::error::Result;
 
 /// simplest query: rust
 /// all features:
@@ -49,36 +50,36 @@ const QUOTATION_MARKS: [char; 2] = ['\'', '"'];
 const SPACE: [char; 2] = [' ', '\t'];
 const NOT_TAG: [char; 4] = [' ', '\t', '(', ')'];
 
-type Result = PResult<Query<String>>;
+type ResultQ = Result<Query<String>>;
 
 /// single or double quote
-fn quoted_tag(input: &mut &str) -> PResult<String> {
+fn quoted_tag(input: &mut &str) -> Result<String> {
     let quote = one_of(QUOTATION_MARKS).parse_next(input)?;
     let tag = take_until(1.., quote).parse_next(input)?;
     Ok(tag.to_string())
 }
 
-fn bare_tag(input: &mut &str) -> PResult<String> {
+fn bare_tag(input: &mut &str) -> Result<String> {
     let tag = take_till(1.., NOT_TAG).parse_next(input)?;
     Ok(tag.to_string())
 }
 
-fn tag(input: &mut &str) -> PResult<String> {
+fn tag(input: &mut &str) -> Result<String> {
     alt((quoted_tag, bare_tag)).parse_next(input)
 }
 
-fn query_tag(input: &mut &str) -> Result {
+fn query_tag(input: &mut &str) -> ResultQ {
     let t = tag.parse_next(input)?;
     Ok(Query::Tag(t))
 }
 
-fn space(input: &mut &str) -> PResult<()> {
+fn space(input: &mut &str) -> Result<()> {
     let _ = take_while(1.., SPACE).parse_next(input)?;
     Ok(())
 }
 
-/// within parens, 1 or more tags separated by a comma & optional whitespace
-fn only(input: &mut &str) -> Result {
+/// within parens, 1 or more tags separated by whitespace
+fn only(input: &mut &str) -> ResultQ {
     let tags: Vec<String> = delimited(
         ("(only", space),
         separated(1.., tag, space),
@@ -92,12 +93,12 @@ fn only(input: &mut &str) -> Result {
     Ok(Query::Only(set))
 }
 
-fn op(input: &mut &str) -> PResult<Operator> {
+fn op(input: &mut &str) -> Result<Operator> {
     use Operator::*;
     alt(("and".value(And), "or".value(Or))).parse_next(input)
 }
 
-fn function(input: &mut &str) -> Result {
+fn function(input: &mut &str) -> ResultQ {
     let (op, args) = delimited(
         '(',
         (terminated(op, space), separated(1.., query, space)),
@@ -107,12 +108,12 @@ fn function(input: &mut &str) -> Result {
     Ok(Query::Function(op, args))
 }
 
-fn not(input: &mut &str) -> Result {
+fn not(input: &mut &str) -> ResultQ {
     let arg = delimited(("(not", space), query, (opt(space), ')')).parse_next(input)?;
     Ok(Query::Not(Box::new(arg)))
 }
 
-fn query(input: &mut &str) -> Result {
+fn query(input: &mut &str) -> ResultQ {
     alt((only, function, not, query_tag)).parse_next(input)
 }
 
