@@ -14,8 +14,7 @@ install path:
     cp -r dist {{path}}
 
 websocket path='':
-    sed -e 's_"ws://localhost:3036/ws"_"{{path}}"_' public/main.js > public/copy.js
-    mv public/copy.js public/main.js
+    sed -e 's_"ws://localhost:3036/ws"_"{{path}}"_' dist/public*.js -i
 
 test:
     wasm-pack test --chrome
@@ -28,6 +27,6 @@ clean-all: clean
     rm -rf .parcel-cache
 
 # allow preview before deploy
-release: clean-all (wasm "release") (websocket "wss://austenite.moray-palermo.ts.net/memex/api/ws") parcel
+release: clean-all (wasm "release") parcel (websocket "wss://austenite.moray-palermo.ts.net/memex/api/ws")
 
 wasm_dir := ".wasm_pack"
