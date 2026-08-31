@@ -8,7 +8,8 @@ authors.workspace = true
 crate-type = ["cdylib"]
 
 [dependencies]
-memex-shared = { path = "../memex-shared" }
+memex-query.path = "../query"
+memex-shared.path = "../memex-shared"
 anyhow.workspace = true
 automerge.workspace = true
 console_error_panic_hook = "0.1.7"

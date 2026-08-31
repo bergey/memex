@@ -544,6 +544,7 @@ dependencies = [
  "indexed_db_futures",
  "js-sys",
  "leptos",
+ "memex-query",
  "memex-shared",
  "proptest",
  "tracing",
