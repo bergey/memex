@@ -1,15 +1,15 @@
 [package]
-name = "memex"
+name = "memex-cli"
 description = "enhanced search for Zotero & Calibre"
 version = "0.1.2"
 repository = "https://github.com/bergey/memex"
 edition = "2021"
 
 [dependencies]
+memex-query.path = "../query"
 anyhow.workspace = true
 clap = { version = "4.0.29", features = ["derive"] }
 futures-util = "0.3.31"
 glob = "0.3.2"
 sqlx = { workspace = true, features = ["runtime-tokio", "sqlite"] }
 tokio = { workspace = true, features = [ "rt-multi-thread", "macros" ] }
-winnow = "1.0.4"

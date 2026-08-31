@@ -1,4 +1,3 @@
-use super::{AllTags, TagId};
 use std::collections::HashSet;
 use std::hash::Hash;
 use winnow::combinator::{alt, delimited, opt, separated, terminated};
@@ -25,24 +24,16 @@ pub enum Operator {
     Or,
 }
 
-impl Query<String> {
-    pub fn compile(self, tags: &mut AllTags) -> Query<TagId> {
-        use Query::*;
-        match self {
-            Tag(s) => {
-                let id = tags.insert(s);
-                Tag(id)
-            }
-            Only(ts) => {
-                let mut ids = HashSet::new();
-                for t in ts {
-                    ids.insert(tags.insert(t));
-                }
-                Only(ids)
-            }
-            Function(op, args) => Function(op, args.into_iter().map(|q| q.compile(tags)).collect()),
-            Not(q) => Not(Box::new(q.compile(tags))),
-        }
+pub fn match_tags<T>(query: &Query<T>, item_tags: &HashSet<T>) -> bool
+where
+    T: Eq + Hash,
+{
+    match query {
+        Query::Tag(t) => item_tags.contains(t),
+        Query::Only(ts) => item_tags.is_subset(ts),
+        Query::Function(Operator::And, args) => args.iter().all(|q| match_tags(q, item_tags)),
+        Query::Function(Operator::Or, args) => args.iter().any(|q| match_tags(q, item_tags)),
+        Query::Not(q) => !match_tags(q, item_tags),
     }
 }
 

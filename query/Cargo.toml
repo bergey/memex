@@ -1,0 +1,9 @@
+[package]
+name = "memex-query"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+winnow = "1.0.4"

@@ -7,10 +7,11 @@ use std::io::{self, Write};
 use std::path::Path;
 use std::time;
 
-use memex::format::*;
-use memex::tag::query::*;
-use memex::tag::*;
-use memex::Doc;
+use memex_query::*;
+
+use memex_cli::format::*;
+use memex_cli::tag::*;
+use memex_cli::Doc;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -105,9 +106,9 @@ async fn main() -> anyhow::Result<()> {
             eprintln!("loading from {library_path}");
         }
         let new_docs = if library_path.ends_with("zotero.sqlite") {
-            memex::zotero::load_docs(&mut all_tags, &library_path).await?
+            memex_cli::zotero::load_docs(&mut all_tags, &library_path).await?
         } else if library_path.ends_with("metadata.db") {
-            memex::calibre::load_docs(&mut all_tags, &library_path).await?
+            memex_cli::calibre::load_docs(&mut all_tags, &library_path).await?
         } else {
             eprintln!("skipping {library_path}, unknown format");
             Vec::new()
@@ -120,14 +121,14 @@ async fn main() -> anyhow::Result<()> {
         print_stats(&all_tags, &docs, &mut *output)?;
     }
 
-    let mut tag_counts = memex::stats::TagCounts::new();
+    let mut tag_counts = memex_cli::stats::TagCounts::new();
     let style: Style = args
         .output_file
         .as_ref()
         .map_or(Style::Stdout, |p| Style::from_path(&p));
 
     if let Some(query) = query {
-        let query = query.compile(&mut all_tags);
+        let query = compile(query, &mut all_tags);
         style.header(&mut *output)?;
         for (path, docs) in docs.iter() {
             let mut first = true;
