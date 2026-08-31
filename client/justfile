@@ -8,7 +8,7 @@ wasm profile:
     wasm-pack build --target web --out-dir {{wasm_dir}} --no-typescript --{{profile}} --no-pack
 
 parcel:
-    pnpm parcel build public/index.html
+    pnpm parcel build public/index.html --public-url /memex/
 
 install path:
     cp -r dist {{path}}
@@ -28,8 +28,6 @@ clean-all: clean
     rm -rf .parcel-cache
 
 # allow preview before deploy
-dist: clean-all (wasm "release") (websocket "wss://api.cad.teallabs.org/ws") parcel
-
-austenite: clean (wasm "release") (websocket "austenite.spaceways.home/draft") parcel (install "/var/www/html")
+release: clean-all (wasm "release") (websocket "wss://austenite.moray-palermo.ts.net/memex/api/ws") parcel
 
 wasm_dir := ".wasm_pack"
