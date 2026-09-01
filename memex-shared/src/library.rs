@@ -2,6 +2,7 @@ pub mod action;
 mod crdt;
 pub mod date;
 pub mod ids;
+pub mod schema;
 
 use crate::errors::LogResult;
 use action::*;
