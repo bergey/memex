@@ -6,9 +6,15 @@ use sqlx::postgres::PgPoolOptions;
 use sqlx::sqlite::SqlitePool;
 use sqlx::*;
 use std::env;
+use tracing_subscriber::{filter::EnvFilter, fmt, prelude::*};
 
 #[tokio::main()]
 async fn main() -> anyhow::Result<()> {
+    tracing_subscriber::registry()
+        .with(fmt::layer())
+        .with(EnvFilter::from_default_env())
+        .init();
+
     let postgres = PgPoolOptions::new()
         .max_connections(1)
         .connect(
@@ -37,16 +43,21 @@ async fn main() -> anyhow::Result<()> {
 
     // import docs into AM / memex schema
     let zots = load_zotero().await?; // load docs from Zotero
-    for z in zots {
+    for (i, z) in zots.iter().enumerate() {
         let r_id = library.add_record();
         library.set_title(&r_id, &z.title)?;
         library.set_url(&r_id, &z.url)?;
-        for t in z.tags {
-            library.add_tag(&r_id, &t)?;
+        for t in &z.tags {
+            library.add_tag(&r_id, t)?;
+        }
+        if i % 100 == 0 {
+            tracing::info!("{i} records");
         }
     }
 
     save_postgres(&mut transaction, library_id, &mut library.replicated).await?;
+    transaction.commit().await?;
+    tracing::info!("imported {} records", zots.len());
 
     Ok(())
 }
@@ -67,7 +78,7 @@ pub async fn load_zotero() -> anyhow::Result<Vec<ZoteroItem>> {
     // subquery for each of title, url, joining fieldData
     // subquery for creators, firstName & lastName (only one for now?)
     // let rows = sqlx::query_file_as!(ZoteroItem, "sql/zotero.sql")
-    let mut rows = sqlx::query(" with titles as ( select itemID, value as title from itemData join fieldsCombined using (fieldID) join itemDataValues using (valueID) where fieldName = 'title'), urls as ( select itemID, value as url from itemData join fieldsCombined using (fieldID) join itemDataValues using (valueID) where fieldName = 'url'), tags_comma as ( select itemID, group_concat(name) as tags from itemTags join tags using (tagID) group by itemID ) select itemID, title, url, tags from titles join urls using (itemID) join tags_comma using (itemID) limit 30; ")
+    let mut rows = sqlx::query(" with titles as ( select itemID, value as title from itemData join fieldsCombined using (fieldID) join itemDataValues using (valueID) where fieldName = 'title'), urls as ( select itemID, value as url from itemData join fieldsCombined using (fieldID) join itemDataValues using (valueID) where fieldName = 'url'), tags_comma as ( select itemID, group_concat(name) as tags from itemTags join tags using (tagID) group by itemID ) select itemID, title, url, tags from titles join urls using (itemID) join tags_comma using (itemID)")
         .fetch(&mut *conn);
     let mut items = Vec::new();
     // might be nicer to expose the stream, materialize only one ZoteroItem at a time

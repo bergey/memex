@@ -15,3 +15,5 @@ futures-util = "0.3.31"
 glob = "0.3.2"
 sqlx = { workspace = true, features = ["runtime-tokio", "sqlite", "postgres", "uuid"] }
 tokio = { workspace = true, features = [ "rt-multi-thread", "macros" ] }
+tracing.workspace = true
+tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt"] }

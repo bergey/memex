@@ -1928,6 +1928,8 @@ dependencies = [
  "memex-shared",
  "sqlx",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
