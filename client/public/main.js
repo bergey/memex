@@ -2,7 +2,7 @@ import init, { start } from "../.wasm_pack/client.js";
 
 (async function () {
   await init();
-  start("wss://austenite.moray-palermo.ts.net/memex/api/ws");
+  start("ws://localhost:3036/ws");
 })()
 
 async function registerServiceWorker() {
