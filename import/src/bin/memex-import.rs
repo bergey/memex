@@ -1,29 +1,38 @@
 use memex_shared::*;
 
-use std::env;
-use sqlx::postgres::PgPoolOptions;
 use automerge::{ActorId, AutoCommit};
 use futures_util::TryStreamExt;
+use sqlx::postgres::PgPoolOptions;
 use sqlx::sqlite::SqlitePool;
 use sqlx::*;
+use std::env;
 
 #[tokio::main()]
 async fn main() -> anyhow::Result<()> {
     let postgres = PgPoolOptions::new()
         .max_connections(1)
-        .connect(&env::var("DATABASE_URL").unwrap_or("postgres://memex:memex@localhost:5432/memex-dev".to_string()))
+        .connect(
+            &env::var("DATABASE_URL")
+                .unwrap_or("postgres://memex:memex@localhost:5432/memex-dev".to_string()),
+        )
         .await?;
 
     // load AM doc from Postgres
     let library_id = LibraryId(0);
+    let actor_id = ActorId::random();
     let mut transaction = postgres.begin().await?;
-    let mut document = read_postgres(&mut transaction, library_id)
-        .await?
-        .unwrap_or_else(|| AutoCommit::new());
-    document.set_actor(ActorId::random());
-    let mut library = Library {
-        id: library_id,
-        replicated: document,
+    let mut library = {
+        let o_document = read_postgres(&mut transaction, library_id).await?;
+        match o_document {
+            Some(mut document) => {
+                document.set_actor(actor_id);
+                Library {
+                    id: library_id,
+                    replicated: document,
+                }
+            }
+            None => Library::new(actor_id),
+        }
     };
 
     // import docs into AM / memex schema
