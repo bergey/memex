@@ -1,23 +1,43 @@
 use memex_shared::*;
 
-use automerge::ActorId;
+use std::env;
+use sqlx::postgres::PgPoolOptions;
+use automerge::{ActorId, AutoCommit};
 use futures_util::TryStreamExt;
 use sqlx::sqlite::SqlitePool;
-use sqlx::Row;
+use sqlx::*;
 
 #[tokio::main()]
 async fn main() -> anyhow::Result<()> {
-    let zots = load().await?; // load docs from Zotero
+    let postgres = PgPoolOptions::new()
+        .max_connections(1)
+        .connect(&env::var("DATABASE_URL").unwrap_or("postgres://memex:memex@localhost:5432/memex-dev".to_string()))
+        .await?;
 
     // load AM doc from Postgres
-    let mut library = Library::new(ActorId::random()); // TODO load from PG
+    let library_id = LibraryId(0);
+    let mut transaction = postgres.begin().await?;
+    let mut document = read_postgres(&mut transaction, library_id)
+        .await?
+        .unwrap_or_else(|| AutoCommit::new());
+    document.set_actor(ActorId::random());
+    let mut library = Library {
+        id: library_id,
+        replicated: document,
+    };
 
     // import docs into AM / memex schema
-    for _z in zots {
-        let _r_id = library.add_record();
+    let zots = load_zotero().await?; // load docs from Zotero
+    for z in zots {
+        let r_id = library.add_record();
+        library.set_title(&r_id, &z.title)?;
+        library.set_url(&r_id, &z.url)?;
+        for t in z.tags {
+            library.add_tag(&r_id, &t)?;
+        }
     }
 
-    // save back to Postgres
+    save_postgres(&mut transaction, library_id, &mut library.replicated).await?;
 
     Ok(())
 }
@@ -29,7 +49,7 @@ pub struct ZoteroItem {
     pub tags: Vec<String>,
 }
 
-pub async fn load() -> anyhow::Result<Vec<ZoteroItem>> {
+pub async fn load_zotero() -> anyhow::Result<Vec<ZoteroItem>> {
     let home = std::env::var("HOME")?;
     let path = format!("{home}/Zotero/zotero.sqlite");
     let pool = SqlitePool::connect(&*path).await?;
@@ -41,6 +61,8 @@ pub async fn load() -> anyhow::Result<Vec<ZoteroItem>> {
     let mut rows = sqlx::query(" with titles as ( select itemID, value as title from itemData join fieldsCombined using (fieldID) join itemDataValues using (valueID) where fieldName = 'title'), urls as ( select itemID, value as url from itemData join fieldsCombined using (fieldID) join itemDataValues using (valueID) where fieldName = 'url'), tags_comma as ( select itemID, group_concat(name) as tags from itemTags join tags using (tagID) group by itemID ) select itemID, title, url, tags from titles join urls using (itemID) join tags_comma using (itemID) limit 30; ")
         .fetch(&mut *conn);
     let mut items = Vec::new();
+    // might be nicer to expose the stream, materialize only one ZoteroItem at a time
+    // Could likely borrow &str in that case, maybe expose an iterator over tags also
     while let Some(row) = rows.try_next().await? {
         let id = row.try_get("itemID")?;
         let title = row.try_get("title")?;
@@ -54,4 +76,36 @@ pub async fn load() -> anyhow::Result<Vec<ZoteroItem>> {
         })
     }
     Ok(items)
+}
+
+// cf server::database
+
+async fn read_postgres(
+    transaction: &mut Transaction<'_, Postgres>,
+    id: LibraryId,
+) -> anyhow::Result<Option<AutoCommit>> {
+    let row: Option<Vec<u8>> =
+        query_scalar!("select value from libraries where id = $1", id.to_uuid())
+            .fetch_optional(&mut **transaction)
+            .await?
+            .flatten(); // TODO null value should be eq new empty Library?
+
+    Ok(row.and_then(|bytes: Vec<u8>| AutoCommit::load(bytes.as_ref()).ok()))
+}
+
+async fn save_postgres(
+    transaction: &mut Transaction<'_, Postgres>,
+    id: LibraryId,
+    library: &mut AutoCommit,
+) -> anyhow::Result<()> {
+    let bytes = library.save();
+    query!(
+        "insert into libraries (id, value) values ($1, $2) \
+on conflict (id) do update set value = $2",
+        id.to_uuid(),
+        bytes
+    )
+    .execute(&mut **transaction)
+    .await?;
+    Ok(())
 }
