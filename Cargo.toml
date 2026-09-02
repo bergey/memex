@@ -1,5 +1,6 @@
 [workspace]
-members = ["client", "server", "cli", "memex-shared", "query"]
+members = ["client", "server", "memex-shared", "query", "import"]
+default-members = ["client", "server", "memex-shared", "query"]
 resolver = "2"
 
 [workspace.package]
