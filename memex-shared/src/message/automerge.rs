@@ -6,7 +6,8 @@ pub fn deserialize<'d, D>(d: D) -> Result<sync::Message, D::Error>
 where
     D: serde::Deserializer<'d>,
 {
-    d.deserialize_bytes(AmMessageDVisitor)
+    // https://github.com/enarx/ciborium/issues/96 cannot use deserialize_bytes
+    d.deserialize_byte_buf(AmMessageDVisitor)
 }
 
 struct AmMessageDVisitor;
