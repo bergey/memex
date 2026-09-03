@@ -1,15 +1,27 @@
 use memex_shared::*;
 
+use clap::Parser;
 use automerge::{ActorId, AutoCommit};
 use futures_util::TryStreamExt;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::sqlite::SqlitePool;
 use sqlx::*;
-use std::env;
 use tracing_subscriber::{filter::EnvFilter, fmt, prelude::*};
+
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    #[arg(long, short, default_value_t = 0)]
+    library_id: u128,
+    #[arg(long)]
+    limit: Option<i32>,
+    #[arg(long, short, default_value="postgres://memex:memex@localhost:5432/memex-dev")]
+    database: String,
+}
 
 #[tokio::main()]
 async fn main() -> anyhow::Result<()> {
+    let args = Cli::parse();
     tracing_subscriber::registry()
         .with(fmt::layer())
         .with(EnvFilter::from_default_env())
@@ -17,14 +29,11 @@ async fn main() -> anyhow::Result<()> {
 
     let postgres = PgPoolOptions::new()
         .max_connections(1)
-        .connect(
-            &env::var("DATABASE_URL")
-                .unwrap_or("postgres://memex:memex@localhost:5432/memex-dev".to_string()),
-        )
+        .connect(&args.database)
         .await?;
 
     // load AM doc from Postgres
-    let library_id = LibraryId(0);
+    let library_id = LibraryId(args.library_id);
     let actor_id = ActorId::random();
     let mut transaction = postgres.begin().await?;
     let mut library = {
@@ -42,7 +51,7 @@ async fn main() -> anyhow::Result<()> {
     };
 
     // import docs into AM / memex schema
-    let zots = load_zotero().await?; // load docs from Zotero
+    let zots = load_zotero(args.limit).await?; // load docs from Zotero
     for (i, z) in zots.iter().enumerate() {
         let r_id = library.add_record();
         library.set_title(&r_id, &z.title)?;
@@ -69,7 +78,7 @@ pub struct ZoteroItem {
     pub tags: Vec<String>,
 }
 
-pub async fn load_zotero() -> anyhow::Result<Vec<ZoteroItem>> {
+pub async fn load_zotero(limit: Option<i32>) -> anyhow::Result<Vec<ZoteroItem>> {
     let home = std::env::var("HOME")?;
     let path = format!("{home}/Zotero/zotero.sqlite");
     let pool = SqlitePool::connect(&*path).await?;
@@ -78,7 +87,7 @@ pub async fn load_zotero() -> anyhow::Result<Vec<ZoteroItem>> {
     // subquery for each of title, url, joining fieldData
     // subquery for creators, firstName & lastName (only one for now?)
     // let rows = sqlx::query_file_as!(ZoteroItem, "sql/zotero.sql")
-    let mut rows = sqlx::query(" with titles as ( select itemID, value as title from itemData join fieldsCombined using (fieldID) join itemDataValues using (valueID) where fieldName = 'title'), urls as ( select itemID, value as url from itemData join fieldsCombined using (fieldID) join itemDataValues using (valueID) where fieldName = 'url'), tags_comma as ( select itemID, group_concat(name) as tags from itemTags join tags using (tagID) group by itemID ) select itemID, title, url, tags from titles join urls using (itemID) join tags_comma using (itemID)")
+    let mut rows = sqlx::query(" with titles as ( select itemID, value as title from itemData join fieldsCombined using (fieldID) join itemDataValues using (valueID) where fieldName = 'title'), urls as ( select itemID, value as url from itemData join fieldsCombined using (fieldID) join itemDataValues using (valueID) where fieldName = 'url'), tags_comma as ( select itemID, group_concat(name) as tags from itemTags join tags using (tagID) group by itemID ) select itemID, title, url, tags from titles join urls using (itemID) join tags_comma using (itemID) limit $1").bind(limit.unwrap_or(100_000))
         .fetch(&mut *conn);
     let mut items = Vec::new();
     // might be nicer to expose the stream, materialize only one ZoteroItem at a time
