@@ -34,7 +34,8 @@ impl Client {
             am: HashMap::new(),
             library_out: None,
             library_in: None,
-            auth_token: None,
+            // workaround until I implement second-device login
+            auth_token: Some(AuthToken(0)),
         }
     }
 

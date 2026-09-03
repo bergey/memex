@@ -9,7 +9,7 @@ pub struct RecordId(pub ObjId);
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub struct TagId(pub ObjId);
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug, Serialize, Deserialize)]
-pub struct AuthToken(u128);
+pub struct AuthToken(pub u128);
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct UserId(u128);
 
