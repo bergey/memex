@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select expires from auth_tokens join libraries on user_id = owner where auth_tokens.id = $1 and libraries.id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "expires",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "auth_tokens",
+            "name": "expires"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "fb3f6b4d695f890d03b3c581fb44c61fa26746e81a90661162ad15b991f0207e"
+}

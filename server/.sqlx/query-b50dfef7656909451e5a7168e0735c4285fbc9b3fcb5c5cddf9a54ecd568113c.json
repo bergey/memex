@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "select value from libraries where id = $1",
+  "query": "select value from passkeys where user_id = $1",
   "describe": {
     "columns": [
       {
@@ -9,7 +9,7 @@
         "type_info": "Bytea",
         "origin": {
           "Table": {
-            "table": "libraries",
+            "table": "passkeys",
             "name": "value"
           }
         }
@@ -17,12 +17,12 @@
     ],
     "parameters": {
       "Left": [
-        "Uuid"
+        "Int4"
       ]
     },
     "nullable": [
-      true
+      false
     ]
   },
-  "hash": "a8767bbc45d1f4d6602622fcfbe9c26c4cc763657408b24ad33ba45dbe721d14"
+  "hash": "b50dfef7656909451e5a7168e0735c4285fbc9b3fcb5c5cddf9a54ecd568113c"
 }

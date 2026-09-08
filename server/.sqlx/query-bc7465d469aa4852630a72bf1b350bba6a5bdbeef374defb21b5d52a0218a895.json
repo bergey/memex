@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into auth_tokens (id, user_id, expires) values ($1, $2, now() + interval '5m')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bc7465d469aa4852630a72bf1b350bba6a5bdbeef374defb21b5d52a0218a895"
+}

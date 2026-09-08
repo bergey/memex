@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select users.external_id, state from passkey_challenges join users on users.id = user_id where challenge = $1 and expires > now()",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "external_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "external_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "state",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "passkey_challenges",
+            "name": "state"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bytea"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "fd95686e3dad1678616403ada31da89cde6aeb3cc2b010087aef75783e31af55"
+}
