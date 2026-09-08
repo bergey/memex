@@ -7,6 +7,7 @@ use memex_shared::library::{RecordId, TagId, action::Action};
 
 use leptos::html::*;
 use leptos::prelude::*;
+use leptos::tachys::html::event;
 use std::collections::HashSet;
 
 pub fn body(reactive: ReactiveLibrary, tx: Sender<Action>) -> impl IntoView {
@@ -19,6 +20,14 @@ pub fn body(reactive: ReactiveLibrary, tx: Sender<Action>) -> impl IntoView {
 
 fn search(library: ReactiveLibrary) -> impl IntoView {
     section().id("searches").child((
+        button()
+            .child("Sync") // TODO icon
+            .on(event::click, move |_| {
+                // connect, with auth token
+                // refresh token someday
+                // with no auth token, or token expired, try login
+                // if login fails, offer signup / link to existing
+            }),
         h1().child("Search"),
         // TODO inidate when search term is invalid / results are out of date
         input().bind(leptos::attr::Value, library.search),
