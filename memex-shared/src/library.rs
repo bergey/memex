@@ -162,7 +162,7 @@ impl Library {
         self.replicated
             .diff_incremental()
             .into_iter()
-            .filter_map(|p| Event::from_patch(p).log_error())
+            .filter_map(|p| Event::from_patch(p).log_error("from_patch"))
             .collect()
     }
 

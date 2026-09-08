@@ -20,7 +20,7 @@ impl super::ServerSync {
                         sleep(30).await;
                     }
                     match crate::auth::load_auth_token() {
-                        None => error!("not implemented"),
+                        None => error!("login not implemented"),
                         Some(auth_token) => {
                             // would it be better to reverse, only mark Connected if this send succeeds?
                             if !self.try_send(&memex_shared::Message::Authorize(auth_token)) {

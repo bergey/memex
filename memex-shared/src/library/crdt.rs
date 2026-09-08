@@ -53,7 +53,7 @@ impl Library {
     pub(super) fn get_string(&self, r_id: &ObjId, field: &str) -> String {
         self.replicated
             .get(&r_id, field)
-            .log_error()
+            .log_error(field)
             .flatten()
             .map(|a| a.0.into_string().ok())
             .flatten()
@@ -63,7 +63,7 @@ impl Library {
     pub(super) fn get_i64(&self, r_id: &ObjId, field: &str) -> Option<i64> {
         self.replicated
             .get(&r_id, field)
-            .log_error()
+            .log_error(field)
             .flatten()
             .and_then(|a| a.0.to_i64())
     }

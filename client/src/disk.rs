@@ -20,17 +20,17 @@ pub fn save_library(library: &mut Library) {
 pub async fn load_library(id: LibraryId) -> Library {
     try_load(id)
         .await
-        .log_error()
+        .log_error("try_load")
         .and_then(|jsv| decode_library(id, jsv))
         .unwrap_or_else(|| Library::new(local_actor_id()))
 }
 
 fn decode_library(id: LibraryId, jsv: JsValue) -> Option<Library> {
     jsv.dyn_into()
-        .map_err(|_| "decode_library: dyn_into Uint8Array failed")
-        .log_error()
+        // .map_err(|_| "decode_library: dyn_into Uint8Array failed")
+        .log_error("")
         .map(|array: Uint8Array| array.to_vec())
-        .and_then(|bytes: Vec<u8>| AutoCommit::load(bytes.as_ref()).log_error())
+        .and_then(|bytes: Vec<u8>| AutoCommit::load(bytes.as_ref()).log_error("AutoCommit::load"))
         // TODO validate schema
         .map(|mut am| {
             am.update_diff_cursor();
@@ -54,7 +54,7 @@ async fn try_load(id: LibraryId) -> OpenDbResult<JsValue> {
 }
 
 async fn save_bytes(id: LibraryId, bytes: Vec<u8>) {
-    try_save_bytes(id, bytes.as_ref()).await.log_error();
+    try_save_bytes(id, bytes.as_ref()).await.log_error("try_save_bytes");
 }
 
 async fn try_save_bytes(id: LibraryId, bytes: &[u8]) -> OpenDbResult<()> {
@@ -75,7 +75,7 @@ async fn try_save_bytes(id: LibraryId, bytes: &[u8]) -> OpenDbResult<()> {
 pub async fn load_some_library() -> Library {
     try_load_some_library()
         .await
-        .log_error()
+        .log_error("try_load_some_library")
         .flatten()
         .and_then(|(key, val)| {
             let s: String = key.dyn_into::<JsString>().ok()?.into();

@@ -55,5 +55,5 @@ impl<T: Debug> Sender<T> {
 }
 
 pub fn local_storage() -> Option<Storage> {
-    web_sys::window().and_then(|w| w.local_storage().log_error().flatten())
+    web_sys::window().and_then(|w| w.local_storage().log_error("local_storage").flatten())
 }

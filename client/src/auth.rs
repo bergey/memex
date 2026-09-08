@@ -5,7 +5,7 @@ use wasm_bindgen::prelude::*;
 
 pub fn load_auth_token() -> Option<AuthToken> {
     let storage = local_storage()?;
-    let s = storage.get_item("auth_token").log_error().flatten()?;
+    let s = storage.get_item("auth_token").log_error("get auth_token").flatten()?;
     AuthToken::from_str(s.as_ref())
 }
 

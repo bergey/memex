@@ -106,9 +106,9 @@ fn onmessage_callback(mut tx: Sender<Message>) -> Closure<dyn FnMut(MessageEvent
 }
 
 fn on_message_callback_inner(tx: &mut Sender<Message>, ev: MessageEvent) -> Option<()> {
-    let abuf = ev.data().dyn_into::<js_sys::ArrayBuffer>().log_error()?;
+    let abuf = ev.data().dyn_into::<js_sys::ArrayBuffer>().log_error("event data")?;
     let vec = js_sys::Uint8Array::new(&abuf).to_vec();
-    let message = Message::decode(vec.as_ref()).log_error()?;
+    let message = Message::decode(vec.as_ref()).log_error("cbor decode")?;
     tx.send(message);
     Some(())
 }
