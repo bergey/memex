@@ -2827,6 +2827,7 @@ dependencies = [
  "axum",
  "axum-macros",
  "ciborium",
+ "futures-util",
  "lazy_static",
  "memex-shared",
  "openssl",

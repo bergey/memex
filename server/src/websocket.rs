@@ -2,7 +2,7 @@ use crate::database;
 use crate::metrics;
 use crate::observability::hist_time_since;
 use crate::prelude::*;
-use memex_shared::{AuthToken, Library, LibraryId, Message};
+use memex_shared::{AuthToken, Library, LibraryId, errors::LogResult, Message};
 
 use automerge::sync::SyncDoc;
 use axum::{
@@ -12,6 +12,7 @@ use axum::{
     },
     response::Response,
 };
+use futures_util::sink::SinkExt;
 use std::collections::HashMap;
 use std::time::Instant;
 use tokio::sync::broadcast::{self, Sender};
@@ -102,6 +103,7 @@ async fn sync_crdt_ws(pools: Pools, mut socket: WebSocket) {
             else => break
         }
     }
+    let _ = socket.flush().await.log_error("flush");
     metrics::WS_DISCONNECT.inc();
 }
 
@@ -147,6 +149,7 @@ async fn apply_message_reply(
     match message {
         Message::Authorize(token) => {
             client_state.auth_token = Some(token);
+            // TODO start sync here
             Ok(None)
         }
         Message::LibraryId(id) => {

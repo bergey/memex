@@ -21,3 +21,4 @@ tracing.workspace = true
 uuid.workspace = true
 webauthn-rs = { git = "https://github.com/bergey/webauthn-rs.git", branch = "pub-challenge",  features = ["danger-allow-state-serialisation"] }
 webauthn-rs-core = { git = "https://github.com/bergey/webauthn-rs.git", branch = "pub-challenge"  }
+futures-util = "0.3.34"
