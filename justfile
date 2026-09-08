@@ -1,6 +1,18 @@
 update:
    cargo +nightly update -Z unstable-options --breaking
 
+[working-directory: 'server']
+sqlx:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    cargo sqlx prepare
+    git reset
+    git add .sqlx
+    if ! git diff --cached --exit-code  --quiet; \
+        then git commit -m "sqlx prepare"; \
+        else echo "nothing to commit"; \
+        fi
+
 sqlx-cli:
     cargo install sqlx-cli --no-default-features --features rustls,postgres
 
