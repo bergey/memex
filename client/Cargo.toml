@@ -22,6 +22,7 @@ tracing.workspace = true
 wasm-bindgen = "0.2.121"
 wasm-bindgen-futures = "0.4.72"
 wasm-tracing = "2.1.0"
+leptos_router = "0.8.15"
 
 [dependencies.web-sys]
 version = "0.3.98"

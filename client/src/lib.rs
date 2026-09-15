@@ -60,7 +60,7 @@ pub fn start(server_ws_url: Option<String>) -> Result<()> {
         // Library
         spawn_local(library_thread(library, rx_a, tx_e, rx_down, rx_c, tx_up));
 
-        let _ = leptos::mount::mount_to_body(move || render::body(reactive, tx_a));
+        let _ = leptos::mount::mount_to_body(move || render::router(reactive, tx_a));
     })());
 
     Ok(())
