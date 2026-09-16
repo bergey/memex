@@ -36,6 +36,25 @@ struct Shared {
     sync_state: automerge::sync::State,
 }
 
+impl Shared {
+    // these are functions so a single lifetime is inferred for both fields
+    fn generate_sync_message(&mut self) -> Option<automerge::sync::Message> {
+        self
+            .library
+            .replicated
+            .sync()
+            .generate_sync_message(&mut self.sync_state)
+    }
+
+    fn receive_sync_message(&mut self, am_msg: automerge::sync::Message) {
+        let _ = self
+            .library
+            .replicated
+            .sync()
+            .receive_sync_message(&mut self.sync_state, am_msg);
+    }
+}
+
 async fn act(ws_stream: WSS, mut timer: Timer) {
     let (mut write, mut read) = ws_stream.split();
 
@@ -58,7 +77,7 @@ async fn act(ws_stream: WSS, mut timer: Timer) {
             if let Some(Ok(tungstenite::Message::Binary(ws_bytes))) = read.next().await {
                 if let Ok(memex::Message::Library(am_msg)) = memex::Message::decode(&ws_bytes) {
                     let mut shared = shared_for_read.lock().unwrap();
-                    receive_sync_message(&mut shared, am_msg);
+                    shared.receive_sync_message(am_msg);
                 }
             }
         }
@@ -86,10 +105,9 @@ async fn act(ws_stream: WSS, mut timer: Timer) {
                 3 => shared.library.set_url(&r_id, &s).unwrap(),
                 _ => error!("i out of bounds: {i}"),
             }
-            generate_sync_message(&mut shared)
+            shared.generate_sync_message()
         };
-        if let Some(am_msg) = o_msg
-        {
+        if let Some(am_msg) = o_msg {
             send_message(&mut write, memex::Message::Library(am_msg)).await;
         }
     }
@@ -108,19 +126,4 @@ async fn send_message(write: &mut SplitSink<WSS, tungstenite::Message>, msg: mem
 
 fn randomize_string(s: &mut String) {
     rand::distr::Alphabetic.append_string(&mut rand::rng(), s, 8);
-}
-
-// these are functions so a single lifetime is inferred for both fields
-fn generate_sync_message(shared: &mut Shared) -> Option<automerge::sync::Message> {
-    shared.library
-        .replicated
-        .sync()
-        .generate_sync_message(&mut shared.sync_state)
-}
-
-fn receive_sync_message(shared: &mut Shared, am_msg: automerge::sync::Message) {
-    let _ = shared.library
-        .replicated
-        .sync()
-        .receive_sync_message(&mut shared.sync_state, am_msg);
 }
