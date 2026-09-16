@@ -98,10 +98,9 @@ where
 
     info!("starting user behavior");
     let mut joins = Vec::new();
+    let timer = Timer::new(&cli); // clone this to share the atomic counter
     for t in ts.into_iter() {
-        // TODO share atomic counter
-        let timer = Timer::new(&cli);
-        joins.push(spawn(act(t, timer)))
+        joins.push(spawn(act(t, timer.clone())))
     }
     for j in joins {
         let _ = j.await;
@@ -114,10 +113,10 @@ where
 
 #[derive(Clone)]
 pub struct Timer {
-    deadline: Instant,
+    deadline: Instant, // time of next action, random on each call to next()
     think: Option<Exp<f64>>,
     stop_after: Option<u64>,
-    count: Arc<AtomicU64>,
+    count: Arc<AtomicU64>,  // shared among all users
 }
 
 impl Timer {
