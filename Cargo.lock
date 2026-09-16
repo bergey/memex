@@ -1922,6 +1922,7 @@ dependencies = [
  "log",
  "memex-shared",
  "phish",
+ "rand 0.10.2",
  "tokio",
  "tokio-tungstenite 0.30.0",
 ]
