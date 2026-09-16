@@ -11,3 +11,5 @@ tokio = { workspace = true, features = ["full" ] }
 tokio-tungstenite = { version = "0.30.0", features = ["rustls-tls-native-roots"] }
 anyhow.workspace = true
 log = "0.4.34"
+futures-util = "0.3.34"
+automerge.workspace = true
