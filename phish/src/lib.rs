@@ -74,8 +74,8 @@ where
     let mut joins = Vec::new();
     let mut time = Instant::now();
     for i in 1..=cli.num_users as usize {
-        let ws = spawn(connect(i));
-        joins.push(ws);
+        let t = spawn(connect(i));
+        joins.push(t);
         debug!("started {i} connection attempts");
         if let Some(ramp_s) = cli.ramp_time {
             time += Duration::from_secs_f64(ramp_s / cli.num_users as f64);
@@ -83,25 +83,25 @@ where
         }
     }
 
-    let mut wss = Vec::new();
+    let mut ts = Vec::new();
     for j in joins {
-        wss.push(j.await?);
-        if wss.len() as u64 % (std::cmp::max(1, cli.num_users / 10)) == 0
-            || wss.len() as u64 == cli.num_users
+        ts.push(j.await?);
+        if ts.len() as u64 % (std::cmp::max(1, cli.num_users / 10)) == 0
+            || ts.len() as u64 == cli.num_users
         {
             // approximate, we may have opened more if they complete out of order
-            info!("opened {} connections", wss.len());
+            info!("opened {} connections", ts.len());
         } else {
-            debug!("opened {} connections", wss.len());
+            debug!("opened {} connections", ts.len());
         }
     }
 
     info!("starting user behavior");
     let mut joins = Vec::new();
-    for ws in wss.into_iter() {
+    for t in ts.into_iter() {
         // TODO share atomic counter
         let timer = Timer::new(&cli);
-        joins.push(spawn(act(ws, timer)))
+        joins.push(spawn(act(t, timer)))
     }
     for j in joins {
         let _ = j.await;
