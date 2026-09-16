@@ -19,6 +19,11 @@ impl Library {
         Ok(())
     }
 
+    pub fn set_author(&mut self, r_id: &RecordId, s: &str) -> anyhow::Result<()> {
+        self.replicated.put(&r_id.0, "author", s)?;
+        Ok(())
+    }
+
     pub fn set_url(&mut self, r_id: &RecordId, s: &str) -> anyhow::Result<()> {
         self.replicated.put(&r_id.0, "url", s)?;
         Ok(())
