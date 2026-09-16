@@ -1,12 +1,14 @@
 #[macro_use]
 extern crate lazy_static;
 
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use clap::Parser;
 use log::{debug, info};
 use prometheus::{self, Histogram, IntCounter};
 use rand_distr::{Distribution, Exp};
 use tokio::spawn;
-use tokio::time::{Duration, Instant, sleep, sleep_until};
+use tokio::time::{Duration, Instant, Sleep, sleep, sleep_until};
 
 #[derive(Parser, Debug, Clone)]
 struct Cli {
@@ -51,7 +53,7 @@ where
     T: Send + Sync +'static,
     C: Fn(usize) -> CF,
     CF: Future<Output = T> + Send + 'static,
-    A: for<'a> Fn(&'a mut T) -> AF + Clone + Send + Sync + 'static,
+    A: Fn(T, Timer) -> AF + Clone + Send + Sync + 'static,
     AF: Future<Output = ()> + Send + Sync + 'static,
 {
     let cli = Cli::parse();
@@ -97,23 +99,9 @@ where
     info!("starting user behavior");
     let mut joins = Vec::new();
     for ws in wss.into_iter() {
-        let think_distribution: Option<Exp<f64>> =
-            cli.think_time_s.map(|λ| Exp::new(λ).unwrap());
-        let act = act.clone();
-        joins.push({
-            spawn(async move {
-                let mut deadline = Instant::now();
-
-                let mut ws = ws;
-                loop {
-                    if let Some(think) = think_distribution {
-                        deadline += Duration::from_secs_f64(think.sample(&mut rand::rng()));
-                        sleep_until(deadline).await;
-                    }
-                    act(&mut ws).await;
-                }
-            })
-        })
+        // TODO share atomic counter
+        let timer = Timer::new(&cli);
+        joins.push(spawn(act(ws, timer)))
     }
     for j in joins {
         let _ = j.await;
@@ -122,4 +110,43 @@ where
     sleep(Duration::from_secs_f64(cli.sleep)).await;
 
     Ok(())
+}
+
+#[derive(Clone)]
+pub struct Timer {
+    deadline: Instant,
+    think: Option<Exp<f64>>,
+    stop_after: Option<u64>,
+    count: Arc<AtomicU64>,
+}
+
+impl Timer {
+    fn new(cli: &Cli) -> Self {
+        Timer {
+            deadline: Instant::now(),
+            think: cli.think_time_s.map(|λ| Exp::new(λ).unwrap()),
+            stop_after: cli.stop_after,
+            count: Arc::new(AtomicU64::new(0)),
+        }
+    }
+}
+
+impl Iterator for Timer {
+    type Item = Sleep;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let i = self.count.fetch_add(1, Ordering::Relaxed);
+        if let Some(n) = self.stop_after {
+            if i == n - 1 {
+                return None
+            }
+        }
+        match self.think {
+            Some(think) => {
+                self.deadline += Duration::from_secs_f64(think.sample(&mut rand::rng()));
+                Some(sleep_until(self.deadline))
+            }
+            None => Some(sleep(Duration::ZERO))
+        }
+    }
 }

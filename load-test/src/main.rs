@@ -26,4 +26,8 @@ async fn connect(user_id: usize) -> WSS {
     }
 }
 
-async fn act(_ws_stream: &mut WSS) {}
+async fn act(_ws_stream: WSS, mut timer: Timer) {
+    while let Some(future) = timer.next() {
+        future.await;
+    }
+}
