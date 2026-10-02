@@ -12,7 +12,7 @@ axum = { version = "0.8.9", features = ["ws"] }
 axum-macros = "0.5.1"
 ciborium.workspace = true
 lazy_static = "1.5.0"
-openssl = { version = "0.10", features = ["vendored"] }
+openssl = { version = "0.10" }
 prometheus = "0.14.0"
 sqlx = { workspace = true, features = ["postgres", "runtime-tokio", "tls-rustls", "bigdecimal", "uuid", "time", "migrate", "macros"] }
 tokio = { workspace = true, features = ["full"] }
@@ -21,3 +21,9 @@ tracing.workspace = true
 uuid.workspace = true
 webauthn-rs = { git = "https://github.com/bergey/webauthn-rs.git", branch = "pub-challenge",  features = ["danger-allow-state-serialisation"] }
 webauthn-rs-core = { git = "https://github.com/bergey/webauthn-rs.git", branch = "pub-challenge"  }
+
+[features]
+# vendor for local dev, nix provides for release builds
+# https://stackoverflow.com/questions/69428144/can-i-activate-a-dependencys-feature-only-for-debug-profile
+default = ["openssl-vendored"]
+openssl-vendored = ["openssl/vendored"]
