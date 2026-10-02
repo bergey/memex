@@ -7,7 +7,6 @@ use automerge::{
     sync::{Message, SyncDoc},
 };
 use memex_shared::{AuthToken, LibraryId};
-use sqlx::types::time::OffsetDateTime;
 use sqlx::*;
 
 // TODO rename before I add any more AM doc types
@@ -62,13 +61,17 @@ pub async fn authorize(
     library_id: LibraryId,
 ) -> anyhow::Result<bool> {
     let mut transaction = database.begin().await?;
-    let expires = query_scalar!("select expires from auth_tokens join libraries on user_id = owner where auth_tokens.id = $1 and libraries.id = $2", auth_token.to_uuid(), library_id.to_uuid())
+    let owner = query_scalar!("select owner from libraries where id = $1", library_id.to_uuid())
+        .fetch_optional(&mut *transaction)
+        .await?;
+    let user = query_scalar!("select user_id from auth_tokens where auth_tokens.id = $1 and expires > now()", auth_token.to_uuid())
         .fetch_optional(&mut *transaction)
         .await?;
     transaction.commit().await?;
-    match expires {
-        None => Ok(false),
-        Some(expires) => Ok(OffsetDateTime::now_utc() < expires),
+    match (owner, user) {
+        (_, None) => Ok(false), // token is not valid
+        (None, Some(_)) => Ok(true), // any user may create a new library
+        (Some(owner), Some(user)) => Ok(owner == user),
     }
 }
 

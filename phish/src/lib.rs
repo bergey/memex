@@ -1,12 +1,12 @@
 #[macro_use]
 extern crate lazy_static;
 
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
 use clap::Parser;
 use log::{debug, info};
 use prometheus::{self, Histogram, IntCounter};
 use rand_distr::{Distribution, Exp};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use tokio::spawn;
 use tokio::time::{Duration, Instant, Sleep, sleep, sleep_until};
 
@@ -50,14 +50,14 @@ lazy_static! {
 // one T per user, can be used to retain state between calls to act
 pub async fn phish_main<T, C, A, CF, AF>(connect: C, act: A) -> anyhow::Result<()>
 where
-    T: Send + Sync +'static,
+    T: Send + Sync + 'static,
     C: Fn(usize) -> CF,
     CF: Future<Output = T> + Send + 'static,
     A: Fn(T, Timer) -> AF + Clone + Send + Sync + 'static,
     AF: Future<Output = ()> + Send + Sync + 'static,
 {
     let cli = Cli::parse();
-    env_logger::init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     match cli.ramp_time {
         Some(ramp_s) => info!(
@@ -116,7 +116,8 @@ pub struct Timer {
     deadline: Instant, // time of next action, random on each call to next()
     think: Option<Exp<f64>>,
     stop_after: Option<u64>,
-    count: Arc<AtomicU64>,  // shared among all users
+    count: Arc<AtomicU64>, // shared among all users
+    print_every_n: u64,
 }
 
 impl Timer {
@@ -126,6 +127,10 @@ impl Timer {
             think: cli.think_time_s.map(|λ| Exp::new(λ).unwrap()),
             stop_after: cli.stop_after,
             count: Arc::new(AtomicU64::new(0)),
+            print_every_n: match cli.think_time_s {
+                None => cli.num_users * 10,
+                Some(s) => std::cmp::max(cli.num_users, (cli.num_users as f64 / s) as u64),
+            },
         }
     }
 }
@@ -136,16 +141,21 @@ impl Iterator for Timer {
     fn next(&mut self) -> Option<Self::Item> {
         let i = self.count.fetch_add(1, Ordering::Relaxed);
         if let Some(n) = self.stop_after {
-            if i == n - 1 {
-                return None
+            if i >= n - 1 {
+                return None;
             }
         }
+
+        if i % self.print_every_n == 0 && i > 0 {
+            info!("sent {i} messages so far");
+        }
+
         match self.think {
             Some(think) => {
                 self.deadline += Duration::from_secs_f64(think.sample(&mut rand::rng()));
                 Some(sleep_until(self.deadline))
             }
-            None => Some(sleep(Duration::ZERO))
+            None => Some(sleep(Duration::ZERO)),
         }
     }
 }
