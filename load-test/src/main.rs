@@ -14,15 +14,21 @@ use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async, tungsten
 
 type WSS = WebSocketStream<MaybeTlsStream<TcpStream>>;
 
+struct User {
+    token: memex::user::AuthToken,
+    ws: WSS,
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     phish_main(connect, act).await
 }
 
-async fn connect(user_id: usize) -> WSS {
+async fn connect(user_id: usize) -> User {
     loop {
-        match connect_async("http://localhost:3036").await {
-            Ok((ws, _)) => break ws,
+        match connect_async("ws://localhost:8810/ws").await {
+            Ok((ws, _)) => break User {
+                ws, token: memex::user::AuthToken(user_id as u128)},
             Err(err) => {
                 // no backoff, trust whoever runs the load test to adjust the ramp if necessary
                 warn!("user {user_id}: failed to connect, will retry: {err}");
@@ -55,8 +61,8 @@ impl Shared {
     }
 }
 
-async fn act(ws_stream: WSS, mut timer: Timer) {
-    let (mut write, mut read) = ws_stream.split();
+async fn act(user: User, mut timer: Timer) {
+    let (mut write, mut read) = user.ws.split();
 
     let (library_id, shared) = {
         let library_id = memex::LibraryId::random();
@@ -84,8 +90,9 @@ async fn act(ws_stream: WSS, mut timer: Timer) {
     });
 
     timer.next().unwrap().await;
+    send_message(&mut write, memex::Message::Authorize(user.token)).await;
     send_message(&mut write, memex::Message::LibraryId(library_id)).await;
-    let mut i = 0;
+    let mut i = 1;
     let mut r_id = {
         let mut lock = shared.lock().unwrap();
         lock.library.add_record()

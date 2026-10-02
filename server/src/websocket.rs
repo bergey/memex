@@ -158,7 +158,7 @@ async fn apply_message_reply(
                 .library_in
                 .ok_or_else(|| anyhow::anyhow!("sync message before Library ID set"))?;
             if !authorized(database, client_state.auth_token, id).await? {
-                anyhow::bail!("not authorized")
+                anyhow::bail!("not authorized: {:?}", client_state.auth_token)
             }
             let am_state = client_state.get_am(id);
             let mut document =
