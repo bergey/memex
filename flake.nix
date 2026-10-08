@@ -26,5 +26,9 @@
 
       default = self.packages.${system}.memex-server;
     }) nixpkgs.legacyPackages;
+
+    overlays.default = final: prev: {
+      inherit (self.packages) memex-server;
+    };
   };
 }
