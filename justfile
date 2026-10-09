@@ -1,5 +1,6 @@
 update:
-   cargo +nightly update -Z unstable-options --breaking
+   # requires cargo-edit
+   cargo upgrade
 
 [working-directory: 'server']
 sqlx:
