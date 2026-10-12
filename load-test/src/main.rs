@@ -26,7 +26,8 @@ async fn main() -> anyhow::Result<()> {
 
 async fn connect(user_id: usize) -> User {
     loop {
-        match connect_async("ws://localhost:8810/ws").await {
+        // TODO WS URL from args
+        match connect_async("ws://prandtl:8810/ws").await {
             Ok((ws, _)) => break User {
                 ws, token: memex::user::AuthToken(user_id as u128)},
             Err(err) => {
@@ -64,9 +65,10 @@ impl Shared {
 async fn act(user: User, mut timer: Timer) {
     let (mut write, mut read) = user.ws.split();
 
+    // TODO consider moving this into connect / User
     let (library_id, shared) = {
-        let library_id = memex::LibraryId::random();
         let mut library = memex::Library::new(automerge::ActorId::random());
+        let library_id = memex::LibraryId::random();
         library.id = library_id;
         let sync_state = automerge::sync::State::new();
         let shared = Arc::new(Mutex::new(Shared {
