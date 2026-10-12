@@ -15,13 +15,14 @@ pub async fn apply_message(
     id: LibraryId,
     sync_state: &mut automerge::sync::State,
     message: Message,
+    owner: i32,
 ) -> anyhow::Result<AutoCommit> {
     let mut transaction = database.begin().await?;
     let mut document = read_library(&mut transaction, id)
         .await?
         .unwrap_or_else(|| AutoCommit::new());
     document.sync().receive_sync_message(sync_state, message)?;
-    save_library(&mut transaction, id, &mut document).await?;
+    save_library(&mut transaction, id, &mut document, owner).await?;
     transaction.commit().await?;
     Ok(document)
 }
@@ -42,13 +43,15 @@ async fn save_library(
     transaction: &mut Transaction<'_, Postgres>,
     id: LibraryId,
     library: &mut AutoCommit,
+    owner: i32,
 ) -> anyhow::Result<()> {
     let bytes = library.save();
     query!(
-        "insert into libraries (id, value) values ($1, $2) \
+        "insert into libraries (id, value, owner) values ($1, $2, $3) \
 on conflict (id) do update set value = $2",
         id.to_uuid(),
-        bytes
+        bytes,
+        owner
     )
     .execute(&mut **transaction)
     .await?;
@@ -59,7 +62,7 @@ pub async fn authorize(
     database: &PgPool,
     auth_token: AuthToken,
     library_id: LibraryId,
-) -> anyhow::Result<bool> {
+) -> anyhow::Result<Option<i32>> { // user.id not external ID
     let mut transaction = database.begin().await?;
     let owner = query_scalar!("select owner from libraries where id = $1", library_id.to_uuid())
         .fetch_optional(&mut *transaction)
@@ -69,9 +72,10 @@ pub async fn authorize(
         .await?;
     transaction.commit().await?;
     match (owner, user) {
-        (_, None) => Ok(false), // token is not valid
-        (None, Some(_)) => Ok(true), // any user may create a new library
-        (Some(owner), Some(user)) => Ok(owner == user),
+        (None, Some(Some(user))) => Ok(Some(user)), // any user may create a new library
+        (Some(Some(owner)), Some(Some(user))) if owner == user => Ok(Some(owner)),
+        _ => Ok(None)  // either invalid token or user does not own this library
+
     }
 }
 
