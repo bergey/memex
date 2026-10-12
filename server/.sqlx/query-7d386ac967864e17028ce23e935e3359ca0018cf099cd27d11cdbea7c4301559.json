@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select user_id from auth_tokens where auth_tokens.id = $1 and expires > now()",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "auth_tokens",
+            "name": "user_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "7d386ac967864e17028ce23e935e3359ca0018cf099cd27d11cdbea7c4301559"
+}

@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into libraries (id, value, owner) values ($1, $2, $3) on conflict (id) do update set value = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bytea",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0a4205d74e572582dcdd801759b0f76a3302b24c7f8dfbd1dbcefa383a657c62"
+}
