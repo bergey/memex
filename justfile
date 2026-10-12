@@ -17,9 +17,8 @@ sqlx-cli:
     cargo install sqlx-cli --no-default-features --features rustls,postgres
 
 setup:
- createuser memex --login || true
+ createuser memex --login -P || true
  createdb {{pg_db}} -O memex || true
- # TODO set password for this user
  psql -d {{pg_db}} -c 'grant all on database "{{pg_db}}" to memex' -c 'grant all on all tables in schema public to memex' -c 'grant all on schema public to memex'
 
 release-server:
