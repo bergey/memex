@@ -157,18 +157,20 @@ async fn apply_message_reply(
             let id = client_state
                 .library_in
                 .ok_or_else(|| anyhow::anyhow!("sync message before Library ID set"))?;
-            if !authorized(database, client_state.auth_token, id).await? {
-                anyhow::bail!("not authorized")
+            match authorized(database, client_state.auth_token, id).await? {
+                None => anyhow::bail!("not authorized: {:?}", client_state.auth_token),
+                Some(user_id) => {
+                    let am_state = client_state.get_am(id);
+                    let mut document =
+                        database::apply_message(&database.postgres, id, am_state, am_msg, user_id).await?;
+                    let _ = BROADCAST.send(Library {
+                        id,
+                        replicated: document.clone(),
+                    });
+                    let o_reply = document.sync().generate_sync_message(am_state);
+                    Ok(o_reply.map(|msg| (id, Message::Library(msg))))
+                }
             }
-            let am_state = client_state.get_am(id);
-            let mut document =
-                database::apply_message(&database.postgres, id, am_state, am_msg).await?;
-            let _ = BROADCAST.send(Library {
-                id,
-                replicated: document.clone(),
-            });
-            let o_reply = document.sync().generate_sync_message(am_state);
-            Ok(o_reply.map(|msg| (id, Message::Library(msg))))
         }
     }
 }
@@ -188,9 +190,9 @@ async fn authorized(
     database: &ConnectionPools,
     o_auth: Option<AuthToken>,
     library_id: LibraryId,
-) -> anyhow::Result<bool> {
+) -> anyhow::Result<Option<i32>> {
     match o_auth {
-        None => Ok(false),
+        None => Ok(None),
         Some(auth_token) => database::authorize(&database.postgres, auth_token, library_id).await,
     }
 }

@@ -27,3 +27,6 @@ webauthn-rs-core = { git = "https://github.com/bergey/webauthn-rs.git", branch =
 # https://stackoverflow.com/questions/69428144/can-i-activate-a-dependencys-feature-only-for-debug-profile
 default = ["openssl-vendored"]
 openssl-vendored = ["openssl/vendored"]
+
+[profile.release]
+debug = true

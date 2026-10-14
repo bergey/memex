@@ -1,0 +1,18 @@
+[package]
+name = "load-test"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+
+[dependencies]
+phish.path = "../phish"
+memex-shared.path = "../memex-shared"
+tokio = { workspace = true, features = ["full" ] }
+tokio-tungstenite = { version = "0.30.0", features = ["rustls-tls-native-roots"] }
+anyhow.workspace = true
+log = "0.4.34"
+futures-util = "0.3.34"
+automerge.workspace = true
+rand = { version = "0.10.2", features = [ "alloc" ] }
+prometheus = "0.14.0"
+lazy_static = "1.5.1"

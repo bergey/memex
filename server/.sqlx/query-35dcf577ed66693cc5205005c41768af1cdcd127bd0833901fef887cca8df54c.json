@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select owner from libraries where id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "owner",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "libraries",
+            "name": "owner"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "35dcf577ed66693cc5205005c41768af1cdcd127bd0833901fef887cca8df54c"
+}
