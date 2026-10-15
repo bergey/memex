@@ -14,46 +14,46 @@ pub struct MemexError(anyhow::Error);
 pub type Result<A, E = MemexError> = std::result::Result<A, E>;
 
 impl Display for MemexError {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
-        Debug::fmt(&self.0, formatter)
-    }
+  fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
+    Debug::fmt(&self.0, formatter)
+  }
 }
 
 impl From<MemexError> for JsValue {
-    fn from(MemexError(err): MemexError) -> Self {
-        js_sys::Error::new(&std::format!("{}", err)).into()
-    }
+  fn from(MemexError(err): MemexError) -> Self {
+    js_sys::Error::new(&std::format!("{}", err)).into()
+  }
 }
 
 impl<T: Into<anyhow::Error>> From<T> for MemexError {
-    fn from(err: T) -> Self {
-        MemexError(err.into())
-    }
+  fn from(err: T) -> Self {
+    MemexError(err.into())
+  }
 }
 
 #[derive(Clone, Debug)]
 pub struct Sender<T>(mpsc::Sender<T>);
 
 impl<T: Debug> From<mpsc::Sender<T>> for Sender<T> {
-    fn from(inner: mpsc::Sender<T>) -> Self {
-        Sender(inner)
-    }
+  fn from(inner: mpsc::Sender<T>) -> Self {
+    Sender(inner)
+  }
 }
 
 impl<T: Debug> Sender<T> {
-    pub fn new(capacity: usize) -> (Self, mpsc::Receiver<T>) {
-        let (tx, rx) = mpsc::channel(capacity);
-        (Sender(tx), rx)
-    }
+  pub fn new(capacity: usize) -> (Self, mpsc::Receiver<T>) {
+    let (tx, rx) = mpsc::channel(capacity);
+    (Sender(tx), rx)
+  }
 
-    pub fn send(&mut self, value: T) {
-        match self.0.try_send(value) {
-            Ok(_) => {}
-            Err(cause) => warn!(?cause, "failed to enqueue message"),
-        }
+  pub fn send(&mut self, value: T) {
+    match self.0.try_send(value) {
+      Ok(_) => {}
+      Err(cause) => warn!(?cause, "failed to enqueue message"),
     }
+  }
 }
 
 pub fn local_storage() -> Option<Storage> {
-    web_sys::window().and_then(|w| w.local_storage().log_error().flatten())
+  web_sys::window().and_then(|w| w.local_storage().log_error().flatten())
 }

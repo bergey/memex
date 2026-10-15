@@ -1,6 +1,4 @@
-use prometheus::{
-    self, register_histogram, register_int_counter, Histogram, IntCounter,
-};
+use prometheus::{self, Histogram, IntCounter, register_histogram, register_int_counter};
 
 lazy_static! {
     pub static ref WS_CONNECT: IntCounter = register_int_counter!(
