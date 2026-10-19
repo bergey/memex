@@ -25,6 +25,12 @@ pub fn start(server_ws_url: Option<String>) -> Result<()> {
   console_error_panic_hook::set_once();
   wasm_tracing::set_as_global_default();
 
+  if let Some(shared_worker) = web_sys::SharedWorker::new("/shared-worker.js").log_error() {
+    let port = shared_worker.port();
+    port.post_message(&wasm_bindgen::JsValue::from(1)).log_error();
+    info!("posted to shared worker");
+  }
+
   // from DOM to Library
   let (tx_a, rx_a) = Sender::new(3);
   // from Library to DOM
