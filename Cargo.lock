@@ -2072,6 +2072,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "memex-server"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "automerge",
+ "axum",
+ "axum-macros",
+ "ciborium",
+ "lazy_static",
+ "memex-shared",
+ "openssl",
+ "prometheus",
+ "sqlx",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+ "webauthn-rs",
+ "webauthn-rs-core",
+]
+
+[[package]]
 name = "memex-shared"
 version = "0.1.0"
 dependencies = [
@@ -3038,28 +3060,6 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
-]
-
-[[package]]
-name = "server"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "automerge",
- "axum",
- "axum-macros",
- "ciborium",
- "lazy_static",
- "memex-shared",
- "openssl",
- "prometheus",
- "sqlx",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "uuid",
- "webauthn-rs",
- "webauthn-rs-core",
 ]
 
 [[package]]
