@@ -25,7 +25,3 @@ extern "C" {
   #[wasm_bindgen(catch)]
   pub async fn signup() -> std::result::Result<String, JsValue>;
 }
-
-fn foo() {
-  baz();
-}
