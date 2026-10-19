@@ -18,8 +18,10 @@ tracing = "0.1.44"
 uuid = "1.24.1"
 getrandom = "0.4.3"
 
+# TODO this is for the server; override for webassembly
 [profile.release]
 lto = true
+debug = true
 
 # The profile that 'dist' will build with
 [profile.dist]
