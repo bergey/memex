@@ -1,8 +1,11 @@
 import init, { start } from "../.wasm_pack/client.js";
 
+// specify worker path here so parcel can find it, hashify the filename
+const myWorker = new SharedWorker(new URL("./shared-worker.js", import.meta.url));
+
 (async function () {
   await init();
-  start("ws://localhost:3036/ws");
+  start("ws://localhost:3036/ws", myWorker.port);
 })()
 
 async function registerServiceWorker() {

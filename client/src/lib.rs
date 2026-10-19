@@ -21,14 +21,21 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 
 #[wasm_bindgen]
-pub fn start(server_ws_url: Option<String>) -> Result<()> {
+pub fn start(server_ws_url: Option<String>, o_worker: Option<web_sys::MessagePort>) -> Result<()> {
   console_error_panic_hook::set_once();
   wasm_tracing::set_as_global_default();
 
-  if let Some(shared_worker) = web_sys::SharedWorker::new("/shared-worker.js").log_error() {
-    let port = shared_worker.port();
-    port.post_message(&wasm_bindgen::JsValue::from(1)).log_error();
-    info!("posted to shared worker");
+  if let Some(shared_worker) = o_worker {
+    shared_worker
+      .post_message(&wasm_bindgen::JsValue::from(2))
+      .log_error();
+  } else {
+    warn!("could not decode shared worker port from JS wrapper");
+  }
+  if let Some(broadcast) = web_sys::BroadcastChannel::new("shared_worker").log_error() {
+    let cb = broadcast_callback();
+    broadcast.set_onmessage(Some(cb.as_ref().unchecked_ref()));
+    cb.forget();
   }
 
   // from DOM to Library
@@ -70,6 +77,10 @@ pub fn start(server_ws_url: Option<String>) -> Result<()> {
   })());
 
   Ok(())
+}
+
+fn broadcast_callback() -> Closure<dyn FnMut(web_sys::MessageEvent)> {
+  Closure::new(|ev: web_sys::MessageEvent| info!("from broadcast: {:?}", ev.data().as_f64()))
 }
 
 async fn library_thread(

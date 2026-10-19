@@ -28,6 +28,7 @@ version = "0.3.98"
 features = [
   'BinaryType',
   'Blob',
+  'BroadcastChannel',
   'CanvasRenderingContext2d',
   'console',
   'Document',
