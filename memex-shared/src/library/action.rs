@@ -4,9 +4,10 @@ use super::{RecordId, TagId};
 use tracing::*;
 
 use anyhow::{Result, anyhow};
+use serde::{Deserialize, Serialize};
 
 // add is () when starting an edit, (usize, ObjId) when finishing
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Action<AR = (), DR = RecordId, AT = (), DT = TagId> {
   SetName(String),
   AddRecord(AR),
@@ -17,7 +18,7 @@ pub enum Action<AR = (), DR = RecordId, AT = (), DT = TagId> {
   DeleteTag(RecordId, DT),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum RecordField {
   Title(String),
   Author(String),

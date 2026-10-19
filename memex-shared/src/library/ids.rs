@@ -1,13 +1,15 @@
+mod objid;
+
 use automerge::ObjId;
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use getrandom;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(PartialEq, Eq, Hash, Clone, Debug)]
-pub struct RecordId(pub ObjId);
-#[derive(PartialEq, Eq, Hash, Clone, Debug)]
-pub struct TagId(pub ObjId);
+#[derive(PartialEq, Eq, Hash, Clone, Debug, Deserialize, Serialize)]
+pub struct RecordId(#[serde(with = "objid")] pub ObjId);
+#[derive(PartialEq, Eq, Hash, Clone, Debug, Deserialize, Serialize)]
+pub struct TagId(#[serde(with = "objid")] pub ObjId);
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct AuthToken(pub u128);
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug, Serialize, Deserialize)]

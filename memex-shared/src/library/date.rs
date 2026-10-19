@@ -1,5 +1,7 @@
+use serde::{Deserialize, Serialize};
+
 // a memex Date can represent Year only, Year-Month, or Year-Month-Date.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Deserialize, Serialize)]
 pub struct Date(i64);
 
 impl Date {
