@@ -73,8 +73,13 @@ pub fn connect_tab(port: web_sys::MessagePort) {
 fn action_callback() -> Closure<dyn FnMut(web_sys::MessageEvent)> {
   let lock = ACTION_Q.lock().unwrap();
   let mut tx = match &*lock {
-    Some(tx) => tx.clone(),
-    None => Sender::new(0).0,
+    Some(tx) => {
+      tx.clone()
+    }
+    None => {
+      error!("action_callback before setup_shared");
+      Sender::new(0).0
+    }
   };
   Closure::new(move |ev: web_sys::MessageEvent| {
     if let Some(action) = serde_wasm_bindgen::from_value(ev.data()).log_error() {
