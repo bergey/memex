@@ -10,7 +10,7 @@ use leptos::html::*;
 use leptos::prelude::*;
 use leptos::tachys::html::event;
 
-pub fn details(tx: Sender<Action>, selected: RwSignal<Option<Record>>) -> impl IntoView {
+pub fn details(tx: ToWorker<Action>, selected: RwSignal<Option<Record>>) -> impl IntoView {
   // update CRDT only on blur.  Accept lost edits if remote change comes through before blur
   // someday if I build a history UI that supports AM get_all / manual conflict resolution, consider flushing dirty fields
   move || {
@@ -57,7 +57,7 @@ pub fn details(tx: Sender<Action>, selected: RwSignal<Option<Record>>) -> impl I
               .on(event::click, {
                 let mut tx = tx.clone();
                 let id = selected.id.clone();
-                move |_| tx.send(Action::AddTag(id.clone(), ()))
+                move |_| tx.send(&Action::AddTag(id.clone(), ()))
               })
               .child("Add Tag"),
             ul().child(For(ForProps {
@@ -73,13 +73,13 @@ pub fn details(tx: Sender<Action>, selected: RwSignal<Option<Record>>) -> impl I
                         let mut tx = tx.clone();
                         let r_id = selected.id.clone();
                         let t_id = tag.id.clone();
-                        move |_| tx.send(Action::SetTag(r_id.clone(), t_id.clone(), tag.name.get()))
+                        move |_| tx.send(&Action::SetTag(r_id.clone(), t_id.clone(), tag.name.get()))
                       }),
                     button().child("-").on(event::click, {
                       let mut tx = tx.clone();
                       let r_id = selected.id.clone();
                       let t_id = tag.id.clone();
-                      move |_| tx.send(Action::DeleteTag(r_id.clone(), t_id.clone()))
+                      move |_| tx.send(&Action::DeleteTag(r_id.clone(), t_id.clone()))
                     }),
                   ))
                 }
@@ -98,7 +98,7 @@ pub fn details(tx: Sender<Action>, selected: RwSignal<Option<Record>>) -> impl I
 }
 
 fn field<T>(
-  tx: Sender<Action>,
+  tx: ToWorker<Action>,
   id: RecordId,
   name: &'static str,
   field: RwSignal<String>,
@@ -118,7 +118,7 @@ fn field<T>(
         let mut tx = tx.clone();
         let id = id.clone();
         move |_| {
-          tx.send(Action::SetRecord(
+          tx.send(&Action::SetRecord(
             id.clone(),
             action(from_string(field.get())),
           ));

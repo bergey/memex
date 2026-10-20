@@ -7,7 +7,7 @@ const myWorker = new SharedWorker(new URL("./shared-worker.js", import.meta.url)
 
 (async function () {
   await init();
-  start("ws://localhost:3036/ws", myWorker.port);
+  start(myWorker.port);
 })()
 
 async function registerServiceWorker() {

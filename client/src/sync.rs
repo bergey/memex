@@ -1,13 +1,19 @@
 mod connect;
-
-use memex_shared::message::Message;
+mod server;
 
 use crate::prelude::*;
-use futures::channel::mpsc as channel;
-use wasm_bindgen::{JsCast, closure::Closure};
-use wasm_bindgen_futures::spawn_local;
+use memex_shared::{
+  library::{Library, action::Action},
+  message::Message,
+};
 
-use web_sys::{MessageEvent, WebSocket};
+use automerge::sync::SyncDoc;
+use futures::channel::mpsc::Receiver;
+use futures::select;
+use std::sync::LazyLock;
+use wasm_bindgen::prelude::*;
+use wasm_bindgen_futures::spawn_local;
+use web_sys::WebSocket;
 
 #[derive(Debug, Clone, Copy)]
 pub enum ConnStatus {
@@ -29,86 +35,117 @@ pub enum WebsocketBackoff {
   Backoff(u32),
 }
 
-impl ServerSync {
-  // spawns a long-lived task
-  pub fn start(
-    url: String,
-  ) -> (
-    Sender<Message>,
-    channel::Receiver<Message>,
-    channel::Receiver<ConnStatus>,
-  ) {
-    let (tx_up, mut rx_up) = Sender::new(3);
-    let (tx_down, rx_down) = Sender::new(10);
-    let (tx_c, rx_c) = Sender::new(3);
+static mut ACTION_Q: LazyLock<(Sender<Action>, Option<Receiver<Action>>)> = LazyLock::new(|| {
+  let (tx, rx) = Sender::new(3);
+  (tx, Some(rx))
+});
 
-    let mut handle = Self {
-      url,
-      ws: WebsocketBackoff::Backoff(0),
-      tx: tx_down,
-      tx_c,
-    };
-
-    spawn_local(async move {
-      handle.connect().await;
-      loop {
-        let msg = rx_up.recv().await.expect("_up channel closed");
-        handle.send(&msg).await;
-      }
-    });
-
+#[wasm_bindgen]
+pub async fn setup_shared(server_ws_url: Option<String>) {
+  setup_observability();
+  // Network
+  let (tx_up, rx_down, rx_c) = if let Some(ws_url) = server_ws_url {
+    ServerSync::start(ws_url)
+  } else {
+    let (tx_up, _) = Sender::new(0);
+    let (tx_down, rx_down) = Sender::new(0);
+    let (tx_c, rx_c) = Sender::new(0);
+    std::mem::forget(tx_down);
+    std::mem::forget(tx_c);
     (tx_up, rx_down, rx_c)
-  }
+  };
 
-  // no retry limit, but exponential backoff via connect,
-  // and when the queue of messages to send fills up, we drop any further
-  // so if we finally connect before user restarts, we send the oldest messages,
-  // AM ensures sync
-  // maybe instead we should drop here if no WS, count on sync-all immediately after connect?
-  async fn send(&mut self, message: &Message) {
-    while !self.try_send(message) {
-      self.connect().await;
+  // Library
+  // TODO send library to main thread?
+  let library = crate::disk::load_some_library().await;
+  unsafe {
+    let q = LazyLock::force_mut(&mut ACTION_Q);
+    if let Some(rx_a) = q.1.take() {
+      spawn_local(shared_worker_thread(library, rx_a, rx_down, rx_c, tx_up));
     }
-  }
-
-  // true on success
-  fn try_send(&mut self, message: &Message) -> bool {
-    match &self.ws {
-      WebsocketBackoff::Backoff(_) => {
-        warn!("websocket backoff in send.  should not be reachable");
-        return false;
-      }
-      WebsocketBackoff::Connected(ws) => {
-        if ws.ready_state() > 1 {
-          self.disconnected();
-          return false;
-        }
-        if let Err(e) = ws.send_with_u8_array(&message.encode()) {
-          debug!(?e, "WS error in send");
-          self.disconnected();
-          return false;
-        }
-        return true; // successful send, done
-      }
-    }
-  }
-
-  fn disconnected(&mut self) {
-    self.ws = WebsocketBackoff::Backoff(0);
-    self.tx_c.send(ConnStatus::Disconnected);
   }
 }
 
-fn onmessage_callback(mut tx: Sender<Message>) -> Closure<dyn FnMut(MessageEvent)> {
-  Closure::new(move |ev: MessageEvent| {
-    on_message_callback_inner(&mut tx, ev);
+#[wasm_bindgen]
+pub fn connect_tab(port: web_sys::MessagePort) {
+  let cb = action_callback();
+  port.set_onmessage(Some(cb.as_ref().unchecked_ref()));
+  cb.forget(); // TODO avoid leaking?
+}
+
+fn action_callback() -> Closure<dyn Fn(web_sys::MessageEvent)> {
+  Closure::new(|ev: web_sys::MessageEvent| unsafe {
+    if let Some((tx, _)) = LazyLock::get_mut(&mut ACTION_Q) {
+      if let Some(action) = serde_wasm_bindgen::from_value(ev.data()).log_error() {
+        tx.send(action);
+      }
+    }
   })
 }
 
-fn on_message_callback_inner(tx: &mut Sender<Message>, ev: MessageEvent) -> Option<()> {
-  let abuf = ev.data().dyn_into::<js_sys::ArrayBuffer>().log_error()?;
-  let vec = js_sys::Uint8Array::new(&abuf).to_vec();
-  let message = Message::decode(vec.as_ref()).log_error()?;
-  tx.send(message);
-  Some(())
+async fn shared_worker_thread(
+  mut library: Library,
+  mut rx_a: Receiver<Action>,
+  mut rx_down: Receiver<Message>,
+  mut rx_c: Receiver<ConnStatus>,
+  mut tx_up: Sender<Message>,
+) {
+  let mut sync_state = automerge::sync::State::new();
+  let mut connected = false;
+  let mut broadcaster = ToWorker::broadcast("shared_worker");
+  loop {
+    select! {
+       r_action = rx_a.recv() => {
+            let action = r_action.context("rx_action").unwrap();
+           let patches = library.apply(&action);
+           crate::disk::save_library(&mut library);
+           for p in patches {
+               broadcaster.send(&p);
+           }
+           if connected {
+               if let Some(message) = library.replicated.sync().generate_sync_message(&mut sync_state) {
+                   tx_up.send(Message::Library(message))
+               }
+           }
+       },
+
+        r_down = rx_down.recv() => {
+            use Message::*;
+            match r_down.context("rx_down").unwrap() {
+                Library(message) => {
+                    library.replicated.sync().receive_sync_message(&mut sync_state, message).unwrap();
+                    for p in library.get_patches(){
+                        broadcaster.send(&p);
+                    }
+                    let our_heads = library.replicated.get_heads();
+                    if let Some(message) = library.replicated.sync().generate_sync_message(&mut sync_state) {
+                        tx_up.send(Message::Library(message));
+                    } else {
+                        debug!( ?sync_state, ?our_heads, "no reply");
+                    }
+                }
+
+                LibraryId(_id) => {// TODO
+                    warn!("for now we only support one Library per user");
+                }
+
+                Authorize(_) => {
+                    warn!("should only be sent from client to server")
+                }
+            }
+        },
+
+        r_c = rx_c.recv() => {
+            use ConnStatus::*;
+            match r_c.context("r_c").unwrap() {
+                Connected => {
+                    connected = true;
+                    tx_up.send(Message::LibraryId(library.id));
+                },
+                Disconnected => connected = false,
+            }
+        }
+
+    }
+  }
 }

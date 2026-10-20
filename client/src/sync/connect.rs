@@ -1,8 +1,9 @@
-use super::{ConnStatus, WebsocketBackoff, onmessage_callback};
+use super::{ConnStatus, WebsocketBackoff};
 use crate::prelude::*;
-use wasm_bindgen::JsCast;
+use memex_shared::message::Message;
 
-use web_sys::WebSocket;
+use wasm_bindgen::{JsCast, closure::Closure};
+use web_sys::{MessageEvent, WebSocket};
 
 impl super::ServerSync {
   pub async fn connect(&mut self) {
@@ -60,4 +61,18 @@ pub async fn sleep(delay_ms: i32) {
 
   let p = js_sys::Promise::new(&mut cb);
   wasm_bindgen_futures::JsFuture::from(p).await.unwrap();
+}
+
+fn onmessage_callback(mut tx: Sender<Message>) -> Closure<dyn FnMut(MessageEvent)> {
+  Closure::new(move |ev: MessageEvent| {
+    on_message_callback_inner(&mut tx, ev);
+  })
+}
+
+fn on_message_callback_inner(tx: &mut Sender<Message>, ev: MessageEvent) -> Option<()> {
+  let abuf = ev.data().dyn_into::<js_sys::ArrayBuffer>().log_error()?;
+  let vec = js_sys::Uint8Array::new(&abuf).to_vec();
+  let message = Message::decode(vec.as_ref()).log_error()?;
+  tx.send(message);
+  Some(())
 }

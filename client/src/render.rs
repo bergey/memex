@@ -9,7 +9,7 @@ use leptos::html::*;
 use leptos::prelude::*;
 use std::collections::HashSet;
 
-pub fn body(reactive: ReactiveLibrary, tx: Sender<Action>) -> impl IntoView {
+pub fn body(reactive: ReactiveLibrary, tx: ToWorker<Action>) -> impl IntoView {
   (
     search(reactive.clone()),
     list::list_section(reactive.clone(), tx.clone()),

@@ -5,6 +5,7 @@ use tracing::*;
 
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
+// use wasm_bindgen::JsValue;
 
 // add is () when starting an edit, (usize, ObjId) when finishing
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -33,6 +34,20 @@ pub type Event = Action<(usize, RecordId), usize, TagId, usize>;
 fn date_from(i: i64) -> date::Date {
   date::Date::from_i64(i)
 }
+
+// impl <'a, AR, DR, AT, DT> Action<AR, DR, AT, DT> where
+//   AR: Serialize + Deserialize<'a>,
+//   DR: Serialize + Deserialize<'a>,
+//   AT: Serialize + Deserialize<'a>,
+//   DT: Serialize + Deserialize<'a> {
+//   pub fn to_js(&self) -> Result<JsValue> {
+//     Ok(serde_wasm_bindgen::to_value(self)?)
+//   }
+
+//   pub fn from_js(val: JsValue) -> Self {
+//     Ok(serde_wasm_bindgen::from_value(val)?)
+//   }
+// }
 
 impl Event {
   pub fn from_patch(patch: automerge::patches::Patch) -> Result<Self> {

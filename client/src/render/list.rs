@@ -8,7 +8,7 @@ use leptos::html::*;
 use leptos::prelude::*;
 use leptos::tachys::html::event;
 
-pub fn list_section(library: super::ReactiveLibrary, tx: Sender<Action>) -> impl IntoView {
+pub fn list_section(library: super::ReactiveLibrary, tx: ToWorker<Action>) -> impl IntoView {
   let mut library_add_button = tx.clone();
   let selected_id = {
     let selected = library.selected.clone();
@@ -31,7 +31,7 @@ pub fn list_section(library: super::ReactiveLibrary, tx: Sender<Action>) -> impl
   section().id("list").child((
     div().class("menu").child((button()
       .on(event::click, move |_| {
-        library_add_button.send(Action::AddRecord(()));
+        library_add_button.send(&Action::AddRecord(()));
       })
       .child("Add"),)),
     table().child((
