@@ -22,8 +22,7 @@ use wasm_bindgen_futures::spawn_local;
 
 #[wasm_bindgen]
 pub fn start(server_ws_url: Option<String>, o_worker: Option<web_sys::MessagePort>) -> Result<()> {
-  console_error_panic_hook::set_once();
-  wasm_tracing::set_as_global_default();
+  observability();
 
   if let Some(shared_worker) = o_worker {
     shared_worker
@@ -81,6 +80,20 @@ pub fn start(server_ws_url: Option<String>, o_worker: Option<web_sys::MessagePor
 
 fn broadcast_callback() -> Closure<dyn FnMut(web_sys::MessageEvent)> {
   Closure::new(|ev: web_sys::MessageEvent| info!("from broadcast: {:?}", ev.data().as_f64()))
+}
+
+#[wasm_bindgen]
+pub fn observability() {
+  console_error_panic_hook::set_once();
+  wasm_tracing::set_as_global_default();
+}
+
+#[wasm_bindgen]
+pub fn worker(x: f64) -> f64 {
+  debug!("in Rust, x={x}");
+  let s = format!("in Rust, x={x}");
+  web_sys::console::log_1(&s.into());
+  x + 1.
 }
 
 async fn library_thread(
