@@ -4,6 +4,7 @@ let wasm_initialized = false;
 
 onconnect = async function (event) {
   if (!wasm_initialized) {
+    // TODO await lock if init is in flight
     await init();
     observability();
     wasm_initialized = true;

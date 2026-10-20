@@ -54,7 +54,7 @@ pub fn start(server_ws_url: Option<String>, o_worker: Option<web_sys::MessagePor
     (tx_up, rx_down, rx_c)
   };
 
-  spawn_local((async move || {
+  spawn_local(async move {
     let library = disk::load_some_library().await;
     let reactive = render::ReactiveLibrary::from_replicated(&library);
     let mut reactive_for_updates = reactive.clone();
@@ -73,7 +73,7 @@ pub fn start(server_ws_url: Option<String>, o_worker: Option<web_sys::MessagePor
     spawn_local(library_thread(library, rx_a, tx_e, rx_down, rx_c, tx_up));
 
     let _ = leptos::mount::mount_to_body(move || render::body(reactive, tx_a));
-  })());
+  });
 
   Ok(())
 }
