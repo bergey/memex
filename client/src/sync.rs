@@ -10,7 +10,7 @@ use memex_shared::{
 use automerge::sync::SyncDoc;
 use futures::channel::mpsc::Receiver;
 use futures::select;
-use std::sync::LazyLock;
+use std::sync::{LazyLock, Mutex};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 use web_sys::WebSocket;
@@ -35,10 +35,7 @@ pub enum WebsocketBackoff {
   Backoff(u32),
 }
 
-static mut ACTION_Q: LazyLock<(Sender<Action>, Option<Receiver<Action>>)> = LazyLock::new(|| {
-  let (tx, rx) = Sender::new(3);
-  (tx, Some(rx))
-});
+static ACTION_Q: LazyLock<Mutex<Option<Sender<Action>>>> = LazyLock::new(|| Mutex::new(None));
 
 #[wasm_bindgen]
 pub async fn setup_shared(server_ws_url: Option<String>) {
@@ -58,11 +55,11 @@ pub async fn setup_shared(server_ws_url: Option<String>) {
   // Library
   // TODO send library to main thread?
   let library = crate::disk::load_some_library().await;
-  unsafe {
-    let q = LazyLock::force_mut(&mut ACTION_Q);
-    if let Some(rx_a) = q.1.take() {
-      spawn_local(shared_worker_thread(library, rx_a, rx_down, rx_c, tx_up));
-    }
+  let mut lock = ACTION_Q.lock().unwrap();
+  if lock.is_none() {
+    let (tx_a, rx_a) = Sender::new(3);
+    *lock = Some(tx_a);
+    spawn_local(shared_worker_thread(library, rx_a, rx_down, rx_c, tx_up));
   }
 }
 
@@ -73,12 +70,15 @@ pub fn connect_tab(port: web_sys::MessagePort) {
   cb.forget(); // TODO avoid leaking?
 }
 
-fn action_callback() -> Closure<dyn Fn(web_sys::MessageEvent)> {
-  Closure::new(|ev: web_sys::MessageEvent| unsafe {
-    if let Some((tx, _)) = LazyLock::get_mut(&mut ACTION_Q) {
-      if let Some(action) = serde_wasm_bindgen::from_value(ev.data()).log_error() {
-        tx.send(action);
-      }
+fn action_callback() -> Closure<dyn FnMut(web_sys::MessageEvent)> {
+  let lock = ACTION_Q.lock().unwrap();
+  let mut tx = match &*lock {
+    Some(tx) => tx.clone(),
+    None => Sender::new(0).0,
+  };
+  Closure::new(move |ev: web_sys::MessageEvent| {
+    if let Some(action) = serde_wasm_bindgen::from_value(ev.data()).log_error() {
+      tx.send(action);
     }
   })
 }
