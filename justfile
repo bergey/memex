@@ -23,7 +23,7 @@ setup:
  psql -d {{pg_db}} -c 'grant all on database "{{pg_db}}" to memex' -c 'grant all on all tables in schema public to memex' -c 'grant all on schema public to memex'
 
 release-server:
-    cargo build --release --bin server
+    cargo build --release --bin memex-server
 
 release-client:
     just client/release
