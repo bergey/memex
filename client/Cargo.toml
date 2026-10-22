@@ -13,20 +13,20 @@ memex-shared.path = "../memex-shared"
 anyhow.workspace = true
 automerge.workspace = true
 console_error_panic_hook = "0.1.7"
-futures = "0.3.32"
+futures = "0.3.34"
 getrandom = { workspace = true, features = ['wasm_js'] }
 indexed_db_futures = { version = "0.6.4", features = ["typed-arrays"] }
-js-sys = "0.3.99"
-leptos = { version = "0.8.19", features = ["csr"] }
+js-sys = "0.3.106"
+leptos = { version = "0.8.22", features = ["csr"] }
 tracing.workspace = true
-wasm-bindgen = "0.2.121"
-wasm-bindgen-futures = "0.4.72"
+wasm-bindgen = "0.2.129"
+wasm-bindgen-futures = "0.4.79"
 wasm-tracing = "2.1.0"
 serde-wasm-bindgen = "0.6.5"
 serde.workspace = true
 
 [dependencies.web-sys]
-version = "0.3.98"
+version = "0.3.106"
 features = [
   'BinaryType',
   'Blob',
@@ -55,4 +55,4 @@ features = [
 ]
 
 [dev-dependencies]
-proptest = "1.11.0"
+proptest = "1.12.0"

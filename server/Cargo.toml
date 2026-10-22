@@ -11,7 +11,7 @@ automerge.workspace = true
 axum = { version = "0.8.9", features = ["ws"] }
 axum-macros = "0.5.1"
 ciborium.workspace = true
-lazy_static = "1.5.0"
+lazy_static = "1.5.1"
 openssl = { version = "0.10" }
 prometheus = "0.14.0"
 sqlx = { workspace = true, features = ["postgres", "runtime-tokio", "tls-rustls", "bigdecimal", "uuid", "time", "migrate", "macros"] }

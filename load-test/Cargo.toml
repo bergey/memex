@@ -13,6 +13,6 @@ anyhow.workspace = true
 log = "0.4.34"
 futures-util = "0.3.34"
 automerge.workspace = true
-rand = { version = "0.10.2", features = [ "alloc" ] }
+rand = { version = "0.10.3", features = [ "alloc" ] }
 prometheus = "0.14.0"
 lazy_static = "1.5.1"
