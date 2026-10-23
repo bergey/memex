@@ -10,7 +10,9 @@ test('has title', async ({ page }) => {
 test('get started link', async ({ page }) => {
   await page.goto('');
 
-  await expect(page.getByRole('heading', { name: 'Search' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Details' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Add' })).toBeVisible();
+  // await expect.soft(page.getByRole('heading', { name: 'Failure' })).toBeVisible();
+  await expect.soft(page.getByRole('heading', { name: 'Search' })).toBeVisible();
+  await expect.soft(page.getByRole('heading', { name: 'Details' })).toBeVisible();
+  await expect.soft(page.getByRole('button', { name: 'Add' })).toBeVisible();
+  // await expect.soft(page.getByRole('heading', { name: 'Bar' })).toBeVisible();
 });
