@@ -56,3 +56,18 @@ async fn authorized(
     Some(auth_token) => database::authorize(&database, auth_token, library_id).await,
   }
 }
+
+#[cfg(test)]
+pub mod tests {
+  use super::*;
+  use crate::websocket::Client;
+
+  #[sqlx::test]
+  async fn set_library_id(pool: PgPool) {
+    let mut client_state = Client::new();
+    let l_id = LibraryId(123);
+    let reply = apply_message_reply(&pool, &mut client_state, Message::LibraryId(l_id)).await.unwrap();
+    assert!(reply.is_none());
+    assert_eq!(client_state.library_in, Some(l_id));
+  }
+}
