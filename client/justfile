@@ -17,7 +17,7 @@ websocket path='':
     sed -e 's_"ws://localhost:3036/ws"_"{{path}}"_' dist/public*.js -i
 
 test:
-    wasm-pack test --chrome
+    pnpm exec playwright test --project chromium
 
 clean:
     rm -rf dist
