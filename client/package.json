@@ -7,6 +7,9 @@
     "@parcel/packager-raw-url": "^2.16",
     "@parcel/service-worker": "^2.16",
     "@parcel/transformer-webmanifest": "^2.16",
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^26.6.5",
     "parcel": "^2.16"
-  }
+  },
+  "scripts": {}
 }
