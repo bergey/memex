@@ -7,7 +7,7 @@ test('has title', async ({ page }) => {
   await expect(page).toHaveTitle(/Memex/);
 });
 
-test('get started link', async ({ page }) => {
+test('initial texts', async ({ page }) => {
   await page.goto('');
 
   // await expect.soft(page.getByRole('heading', { name: 'Failure' })).toBeVisible();
