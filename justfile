@@ -17,6 +17,8 @@ sqlx:
 sqlx-cli:
     cargo install sqlx-cli --no-default-features --features rustls,postgres
 
+pg_db := "memex-dev"
+
 setup:
  createuser memex --login -P || true
  createdb {{pg_db}} -O memex || true
@@ -40,4 +42,8 @@ deploy-clean:
     rm /usr/share/caddy/memex/*~
     rm /usr/bin/memex-server*~
 
-pg_db := "memex-dev"
+# .env file instead?
+[env("DATABASE_URL", "postgres://memex:memex@localhost/memex")]
+test:
+  # all packages with test suites, not only the native executables in default-members
+  cargo test -p memex-shared -p memex-query -p memex-cli -p memex-server
