@@ -1,4 +1,5 @@
-use crate::database;
+mod message;
+
 use crate::metrics;
 use crate::observability::hist_time_since;
 use crate::prelude::*;
@@ -7,7 +8,6 @@ use memex_shared::{AuthToken, Library, LibraryId, Message};
 use automerge::sync::SyncDoc;
 use axum::{
   extract::{
-    State,
     ws::{self, WebSocket, WebSocketUpgrade},
   },
   response::Response,
@@ -66,8 +66,8 @@ async fn sync_crdt_ws(pools: Pools, mut socket: WebSocket) {
                     break;
                 }
                 Some(Ok(ws_msg)) => {
-                    let start = Instant::now();
-                    match apply_message_reply(&pools, &mut client_state, ws_msg).await {
+                  let start = Instant::now();
+                  match apply_ws_message_reply(&pools, &mut client_state, ws_msg).await {
                         Err(e) => {
                             warn!("{e}");
                             break;
@@ -136,62 +136,21 @@ async fn try_send(socket: &mut WebSocket, message: Message, context: &str) -> an
   Ok(())
 }
 
-async fn apply_message_reply(
-  State(database): &Pools,
+async fn apply_ws_message_reply(
+  state: &Pools,
   client_state: &mut Client,
   ws_msg: ws::Message,
 ) -> anyhow::Result<Option<(LibraryId, Message)>> {
-  metrics::AUTOMERGE_MESSAGE_RECEIVED.inc();
-  let message = decode_message(ws_msg).inspect_err(|_| metrics::GARBAGE_MESSAGE_RECEIVED.inc())?;
-  match message {
-    Message::Authorize(token) => {
-      client_state.auth_token = Some(token);
-      Ok(None)
-    }
-    Message::LibraryId(id) => {
-      client_state.library_in = Some(id);
-      Ok(None)
-    }
-    Message::Library(am_msg) => {
-      let id = client_state
-        .library_in
-        .ok_or_else(|| anyhow::anyhow!("sync message before Library ID set"))?;
-      match authorized(database, client_state.auth_token, id).await? {
-        None => anyhow::bail!("not authorized: {:?}", client_state.auth_token),
-        Some(user_id) => {
-          let am_state = client_state.get_am(id);
-          let mut document =
-            database::apply_message(&database.postgres, id, am_state, am_msg, user_id).await?;
-          let _ = BROADCAST.send(Library {
-            id,
-            replicated: document.clone(),
-          });
-          let o_reply = document.sync().generate_sync_message(am_state);
-          Ok(o_reply.map(|msg| (id, Message::Library(msg))))
-        }
-      }
-    }
-  }
+  let message = decode_message(ws_msg)?;
+  message::apply_message_reply(&state.0.postgres, client_state, message).await
 }
 
 fn decode_message(ws_msg: ws::Message) -> anyhow::Result<Message> {
   match ws_msg {
     ws::Message::Binary(bytes) => Ok(Message::decode(bytes.as_ref())?),
-    _ => Err(anyhow::anyhow!("expected binary WS message")),
-  }
-}
-
-// keep it simple, no caching
-// it's tempting to cache the expiration time, check access to a Library only on LibraryId message
-// but we will want to revoke tokens in other ways, and change Library permissions
-// so no caching until I'm prepared to design cache busting / broadcast changes
-async fn authorized(
-  database: &ConnectionPools,
-  o_auth: Option<AuthToken>,
-  library_id: LibraryId,
-) -> anyhow::Result<Option<i32>> {
-  match o_auth {
-    None => Ok(None),
-    Some(auth_token) => database::authorize(&database.postgres, auth_token, library_id).await,
+    _ => {
+      metrics::GARBAGE_MESSAGE_RECEIVED.inc();
+      Err(anyhow::anyhow!("expected binary WS message"))
+    }
   }
 }
