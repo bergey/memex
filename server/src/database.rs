@@ -101,3 +101,16 @@ pub async fn save_auth_token(
   .await?;
   Ok(())
 }
+
+#[cfg(test)]
+pub mod tests {
+  use super::*;
+  use sqlx::PgPool;
+
+  #[sqlx::test]
+  async fn authorize_empty(pool: PgPool) -> anyhow::Result<()> {
+    let o_user_row_id = authorize(&pool, AuthToken(0), LibraryId::random()).await?;
+    assert_eq!(o_user_row_id, None);
+    Ok(())
+  }
+}

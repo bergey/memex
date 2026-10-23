@@ -23,6 +23,8 @@ setup:
  createuser memex --login -P || true
  createdb {{pg_db}} -O memex || true
  psql -d {{pg_db}} -c 'grant all on database "{{pg_db}}" to memex' -c 'grant all on all tables in schema public to memex' -c 'grant all on schema public to memex'
+ createuser sqlx --login --createdb -P # sqlx at password prompt
+ psql -d {{pg_db}} -c 'grant memex to sqlx with inherit true;'
 
 release-server:
     cargo build --release --bin memex-server
@@ -43,7 +45,7 @@ deploy-clean:
     rm /usr/bin/memex-server*~
 
 # .env file instead?
-[env("DATABASE_URL", "postgres://memex:memex@localhost/memex")]
+[env("DATABASE_URL", "postgres://sqlx:sqlx@localhost/memex-dev")]
 test:
   # all packages with test suites, not only the native executables in default-members
   cargo test -p memex-shared -p memex-query -p memex-cli -p memex-server
