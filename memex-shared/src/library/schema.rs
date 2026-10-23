@@ -19,6 +19,10 @@ impl Library {
     Ok(())
   }
 
+  pub fn author(&self, r_id: &RecordId) -> String {
+    self.get_string(&r_id.0, "author")
+  }
+
   pub fn set_author(&mut self, r_id: &RecordId, s: &str) -> anyhow::Result<()> {
     self.replicated.put(&r_id.0, "author", s)?;
     Ok(())
@@ -38,5 +42,34 @@ impl Library {
       .get(&tags, len)?
       .ok_or(anyhow::anyhow!("missing tag we just inserted"))?;
     Ok(TagId(tag_id))
+  }
+}
+
+#[cfg(test)]
+pub mod tests {
+  use super::*;
+  use crate::library::Library;
+
+  use automerge::ActorId;
+
+  fn make_library() -> (Library, RecordId) {
+    let nil_actor_id = ActorId::from(&[0u8; 8]);
+    let mut lib = Library::new(nil_actor_id);
+    let r_id = lib.add_record();
+    (lib, r_id)
+  }
+
+  #[test]
+  fn title() {
+    let (mut lib, r_id) = make_library();
+    lib.set_title(&r_id, "TEST").unwrap();
+    assert_eq!(&lib.title(&r_id), "TEST");
+  }
+
+  #[test]
+  fn author() {
+    let (mut lib, r_id) = make_library();
+    lib.set_author(&r_id, "TEST").unwrap();
+    assert_eq!(&lib.author(&r_id), "TEST");
   }
 }
