@@ -21,6 +21,8 @@ tracing.workspace = true
 uuid.workspace = true
 webauthn-rs = { git = "https://github.com/bergey/webauthn-rs.git", branch = "pub-challenge",  features = ["danger-allow-state-serialisation"] }
 webauthn-rs-core = { git = "https://github.com/bergey/webauthn-rs.git", branch = "pub-challenge"  }
+tower = "0.5.3"
+tower-http = { version = "0.7.1", features = ["csrf"] }
 
 [features]
 # vendor for local dev, nix provides for release builds

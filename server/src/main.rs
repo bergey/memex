@@ -35,7 +35,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     .route("/signup/finish", post(passkeys::signup_finish))
     .route("/login/{user_id}/start", get(passkeys::login_start))
     .route("/login/finish", post(passkeys::login_finish))
-    .with_state(connection_pools);
+    .with_state(connection_pools)
+    .layer(tower::ServiceBuilder::new()
+           .layer(tower_http::csrf::CsrfLayer::new())
+    );
 
   // TODO require env var in release build
   let addr = env::var("LISTEN").unwrap_or("0.0.0.0:3036".to_string());
