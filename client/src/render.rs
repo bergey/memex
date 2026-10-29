@@ -75,10 +75,12 @@ struct Tag {
   name: RwSignal<String>,
 }
 
+#[allow(dead_code)]
 fn use_library() -> Option<ReactiveLibrary> {
   use_context()
 }
 
+#[allow(dead_code)]
 fn use_worker_channel() -> Option<ToWorker<Action>> {
   use_context()
 }

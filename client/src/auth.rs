@@ -17,6 +17,12 @@ pub fn save_auth_token(auth_token: AuthToken) {
   }
 }
 
+pub async fn signup_and_store() {
+  if let Some(resp) = signup().await.log_error() && let Some(token) = AuthToken::from_str(&resp) {
+    save_auth_token(token);
+  }
+}
+
 // where should User ID / name come from?
 #[allow(dead_code)]
 pub fn request_auth_token() -> Result<AuthToken> {
