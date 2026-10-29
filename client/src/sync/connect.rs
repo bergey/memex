@@ -7,36 +7,34 @@ use web_sys::{MessageEvent, WebSocket};
 
 impl super::ServerSync {
   pub async fn connect(&mut self) {
-    while let WebsocketBackoff::Backoff(exponent) = self.ws {
-      match WebSocket::new(&self.url) {
-        Ok(ws) => {
-          info!(url = self.url, "connected WS");
-          ws.set_binary_type(web_sys::BinaryType::Arraybuffer);
-          let cb = onmessage_callback(self.tx.clone());
-          ws.set_onmessage(Some(cb.as_ref().unchecked_ref()));
-          cb.forget();
-          self.ws = WebsocketBackoff::Connected(ws.clone());
-          self.tx_c.send(ConnStatus::Connected);
-          while ws.ready_state() == 0 {
-            sleep(30).await;
-          }
-          match crate::auth::load_auth_token() {
-            None => error!("not implemented"),
-            Some(auth_token) => {
-              // would it be better to reverse, only mark Connected if this send succeeds?
-              if !self.try_send(&memex_shared::Message::Authorize(auth_token)) {
-                self.ws = WebsocketBackoff::Backoff(0);
+    match crate::auth::load_auth_token() {
+      None => {} // TODO refresh, or login if user ID is known
+      Some(auth_token) => {
+        while let WebsocketBackoff::Backoff(exponent) = self.ws {
+          match WebSocket::new(&self.url) {
+            Ok(ws) => {
+              info!(url = self.url, "connected WS");
+              ws.set_binary_type(web_sys::BinaryType::Arraybuffer);
+              let cb = onmessage_callback(self.tx.clone());
+              ws.set_onmessage(Some(cb.as_ref().unchecked_ref()));
+              cb.forget();
+              while ws.ready_state() == 0 {
+                sleep(30).await;
+              }
+              if self.try_send(&memex_shared::Message::Authorize(auth_token)) {
+                self.ws = WebsocketBackoff::Connected(ws.clone());
+                self.tx_c.send(ConnStatus::Connected);
               }
             }
+            Err(err) => {
+              warn!(?err, "could not open websocket");
+              self.ws = WebsocketBackoff::Backoff(exponent + 1);
+              // max_exponent ~ 68 minutes
+              let timeout = exponential_backoff(500, exponent, 14);
+              debug!(exponent, timeout, "sleeping");
+              sleep(timeout).await;
+            }
           }
-        }
-        Err(err) => {
-          warn!(?err, "could not open websocket");
-          self.ws = WebsocketBackoff::Backoff(exponent + 1);
-          // max_exponent ~ 68 minutes
-          let timeout = exponential_backoff(500, exponent, 14);
-          debug!(exponent, timeout, "sleeping");
-          sleep(timeout).await;
         }
       }
     }
