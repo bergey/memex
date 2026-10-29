@@ -22,6 +22,7 @@ pub fn Body(reactive: ReactiveLibrary, tx: ToWorker<Action>) -> impl IntoView {
       <Route path=path!("/") view=move || {
         library_page(reactive.clone(), tx.clone())
       } />
+      <Route path=path!("/account") view=account::Account />
       </Routes>
     </Router>
   }
@@ -37,6 +38,7 @@ fn library_page(reactive: ReactiveLibrary, tx: ToWorker<Action>) -> impl IntoVie
 
 fn search(library: ReactiveLibrary) -> impl IntoView {
   section().id("searches").child((
+    h2().child(a().href("/account").child("Account")),
     h1().child("Search"),
     // TODO inidate when search term is invalid / results are out of date
     input().bind(leptos::attr::Value, library.search),

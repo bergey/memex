@@ -4,7 +4,7 @@ use leptos::html::*;
 use leptos::prelude::*;
 
 #[component]
-fn Account() -> impl IntoView {
+pub fn Account() -> impl IntoView {
   let o_auth_token = auth::load_auth_token();
 
   if o_auth_token.is_some() {
