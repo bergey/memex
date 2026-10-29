@@ -9,9 +9,12 @@ pub fn load_auth_token() -> Option<AuthToken> {
   AuthToken::from_str(s.as_ref())
 }
 
-#[allow(dead_code)]
-pub fn save_auth_token(_auth_token: AuthToken) {
-  panic!("not implemented");
+pub fn save_auth_token(auth_token: AuthToken) {
+  if let Some(storage) = local_storage() {
+    let _ = storage
+      .set_item("auth_token", &auth_token.to_string())
+      .log_error();
+  }
 }
 
 // where should User ID / name come from?
