@@ -7,6 +7,7 @@ mod sync;
 
 use prelude::*;
 
+use leptos::prelude::view;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 
@@ -27,7 +28,7 @@ pub fn start(worker_port: web_sys::MessagePort) -> Result<()> {
     }
 
     let to_worker = ToWorker::port(worker_port);
-    let _ = leptos::mount::mount_to_body(move || render::body(reactive, to_worker));
+    let _ = leptos::mount::mount_to_body(move || view! { <render::Body reactive=reactive tx=to_worker />});
   });
 
   Ok(())

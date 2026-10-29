@@ -7,9 +7,24 @@ use memex_shared::library::{RecordId, TagId, action::Action};
 
 use leptos::html::*;
 use leptos::prelude::*;
+use leptos_router::components::*;
+use leptos_router::path;
 use std::collections::HashSet;
 
-pub fn body(reactive: ReactiveLibrary, tx: ToWorker<Action>) -> impl IntoView {
+#[component]
+pub fn Body(reactive: ReactiveLibrary, tx: ToWorker<Action>) -> impl IntoView {
+  view! {
+    <Router>
+      <Routes fallback=|| "Not found" >
+      <Route path=path!("/") view=move || {
+        library_page(reactive.clone(), tx.clone())
+      } />
+      </Routes>
+    </Router>
+  }
+}
+
+fn library_page(reactive: ReactiveLibrary, tx: ToWorker<Action>) -> impl IntoView {
   (
     search(reactive.clone()),
     list::list_section(reactive.clone(), tx.clone()),
