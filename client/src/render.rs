@@ -1,3 +1,4 @@
+mod account;
 mod details;
 mod library;
 mod list;
@@ -13,6 +14,8 @@ use std::collections::HashSet;
 
 #[component]
 pub fn Body(reactive: ReactiveLibrary, tx: ToWorker<Action>) -> impl IntoView {
+  provide_context(reactive.clone());
+  provide_context(tx.clone());
   view! {
     <Router>
       <Routes fallback=|| "Not found" >
@@ -68,4 +71,12 @@ struct Record {
 struct Tag {
   id: TagId,
   name: RwSignal<String>,
+}
+
+fn use_library() -> Option<ReactiveLibrary> {
+  use_context()
+}
+
+fn use_worker_channel() -> Option<ToWorker<Action>> {
+  use_context()
 }
