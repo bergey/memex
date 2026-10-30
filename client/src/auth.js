@@ -1,5 +1,5 @@
 export async function signup() {
-    const response = await fetch("/signup/start");
+    const response = await fetch("/api/signup/start");
     if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
     }
@@ -9,7 +9,7 @@ export async function signup() {
         publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(json),
     });
 
-    const f_response = await fetch("/signup/finish", {
+    const f_response = await fetch("/api/signup/finish", {
         method: "POST",
         body: passkey.toJSON(),
     });
