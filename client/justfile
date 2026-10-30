@@ -1,14 +1,10 @@
-default: (wasm "dev") parcel-dev serve
+default: (wasm "dev") serve
 
-[working-directory: 'dist']
 serve:
-    pnpm dlx http-server
+    pnpm parcel public/index.html
 
 wasm profile:
     wasm-pack build --target web --out-dir {{wasm_dir}} --no-typescript --{{profile}} --no-pack
-
-parcel-dev:
-    pnpm parcel build public/index.html
 
 parcel-release:
     pnpm parcel build public/index.html --public-url /memex/
