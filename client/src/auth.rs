@@ -11,14 +11,16 @@ pub fn load_auth_token() -> Option<AuthToken> {
 
 pub fn save_auth_token(auth_token: AuthToken) {
   if let Some(storage) = local_storage() {
-    let _ = storage
+    storage
       .set_item("auth_token", &auth_token.to_string())
       .log_error();
   }
 }
 
 pub async fn signup_and_store() {
-  if let Some(resp) = signup().await.log_error() && let Some(token) = AuthToken::from_str(&resp) {
+  if let Some(resp) = signup().await.log_error()
+    && let Some(token) = AuthToken::from_str(&resp)
+  {
     save_auth_token(token);
   }
 }

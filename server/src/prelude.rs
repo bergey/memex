@@ -17,6 +17,7 @@ pub struct ConnectionPools {
 pub struct HttpError {
   pub error: anyhow::Error,
   pub status_code: StatusCode,
+  // TODO optional client-facing description?
 }
 
 pub type HttpResult<T> = std::result::Result<T, HttpError>;
