@@ -4,10 +4,10 @@ export async function signup() {
         throw new Error(`HTTP error! Status: ${response.status}`);
     }
     const json = await response.json();
+    json.publicKey.challenge = Uint8Array.fromBase64(json.publicKey.challenge, {alphabet: "base64url"});
+    json.publicKey.user.id = Uint8Array.fromBase64(json.publicKey.user.id, {alphabet: "base64url"});
 
-    const passkey = await window.navigator.credentials.create({
-        publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(json),
-    });
+    const passkey = await window.navigator.credentials.create(json);
 
     const f_response = await fetch("/api/signup/finish", {
         method: "POST",
