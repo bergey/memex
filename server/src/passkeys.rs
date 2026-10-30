@@ -13,11 +13,10 @@ use axum::{
 use webauthn_rs::prelude::*;
 
 lazy_static! {
-    // TODO env vars
     static ref WEBAUTHN: Webauthn = {
-        let rp_id = "teallabs.org";
-        let rp_origin = Url::parse("https://teallabs.org").expect("Invalid URL");
-        let builder = WebauthnBuilder::new(rp_id, &rp_origin).expect("Invalid configuration");
+        let rp_id = std::env::var("PASSKEY_DOMAIN").unwrap_or("localhost".to_string());
+      let rp_origin = Url::parse(&format!("https://{rp_id}")).expect("Invalid URL");
+        let builder = WebauthnBuilder::new(&rp_id, &rp_origin).expect("Invalid configuration");
         builder.build().expect("Invalid configuration")
     };
 }
@@ -27,7 +26,7 @@ pub async fn signup_start(State(pools): Pools) -> HttpResult<Json<CreationChalle
   let mut transaction = pools.postgres.begin().await?;
   let user_id = create_user(&mut transaction).await?;
   let (to_client, server_secret) =
-    WEBAUTHN.start_passkey_registration(user_id.to_uuid(), "", "", None)?;
+    WEBAUTHN.start_passkey_registration(user_id.to_uuid(), "TODO", "TODO", None)?;
   database::save_passkey_registration(&mut transaction, server_secret, user_id).await?;
   transaction.commit().await?;
   Ok(Json(to_client))
