@@ -16,12 +16,3 @@ impl<A, E: Debug> LogResult<Option<A>> for std::result::Result<A, E> {
     }
   }
 }
-
-impl<E: Debug> LogResult<()> for std::result::Result<(), E> {
-  fn log_error(self) -> () {
-    match self {
-      Ok(()) => (),
-      Err(e) => error!("{:?}", e),
-    }
-  }
-}

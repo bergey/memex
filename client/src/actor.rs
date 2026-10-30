@@ -17,7 +17,7 @@ pub fn local_actor_id() -> ActorId {
         return id;
       }
       let id = ActorId::random();
-      let _ = storage
+      storage
         .set_item("actor_id", &id.to_hex_string())
         .log_error();
       id

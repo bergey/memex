@@ -28,8 +28,8 @@ pub async fn load_library(id: LibraryId) -> Library {
 fn decode_library(id: LibraryId, jsv: JsValue) -> Option<Library> {
   jsv
     .dyn_into()
-    .map_err(|_| "decode_library: dyn_into Uint8Array failed")
-    .log_error()
+    .inspect_err(|_| error!("decode_library: dyn_into Uint8Array failed"))
+    .ok()
     .map(|array: Uint8Array| array.to_vec())
     .and_then(|bytes: Vec<u8>| AutoCommit::load(bytes.as_ref()).log_error())
     // TODO validate schema
