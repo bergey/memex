@@ -11,7 +11,8 @@ export async function signup() {
 
     const f_response = await fetch("/api/signup/finish", {
         method: "POST",
-        body: passkey.toJSON(),
+      body: JSON.stringify(passkey),
+        headers: new Headers([["content-type", "application/json"]]),
     });
     if (!f_response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);

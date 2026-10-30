@@ -13,12 +13,13 @@ use axum::{
 use webauthn_rs::prelude::*;
 
 lazy_static! {
-    static ref WEBAUTHN: Webauthn = {
-        let rp_id = std::env::var("PASSKEY_DOMAIN").unwrap_or("localhost".to_string());
-      let rp_origin = Url::parse(&format!("https://{rp_id}")).expect("Invalid URL");
-        let builder = WebauthnBuilder::new(&rp_id, &rp_origin).expect("Invalid configuration");
-        builder.build().expect("Invalid configuration")
-    };
+  static ref WEBAUTHN: Webauthn = {
+    let origin = std::env::var("PASSKEY_ORIGIN").unwrap_or("http://localhost:1234".to_string());
+    let rp_origin = Url::parse(&origin).expect("Invalid URL");
+    let rp_id = rp_origin.host_str().unwrap().to_string();
+    let builder = WebauthnBuilder::new(&rp_id, &rp_origin).expect("Invalid configuration");
+    builder.build().expect("Invalid configuration")
+  };
 }
 
 /// new User, no prior credentials
@@ -46,7 +47,9 @@ pub async fn signup_finish(
       error: anyhow::anyhow!("registration not found or expired"),
       status_code: StatusCode::CONFLICT,
     })?;
-  let passkey = WEBAUTHN.finish_passkey_registration(&body.0, &reg)?;
+  let passkey = WEBAUTHN
+    .finish_passkey_registration(&body.0, &reg)
+    .with_status(StatusCode::CONFLICT)?;
   database::save_passkey(&mut transaction, &passkey, user_id).await?; // delete registration
   let auth_token = AuthToken::random();
   save_auth_token(&mut transaction, auth_token, user_id).await?;
