@@ -10,6 +10,10 @@ use prelude::*;
 use axum::routing::{get, post};
 use sqlx::postgres::PgPoolOptions;
 use std::env;
+use mimalloc::MiMalloc;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 #[macro_use]
 extern crate lazy_static;
