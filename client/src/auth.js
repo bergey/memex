@@ -17,5 +17,5 @@ export async function signup() {
     if (!f_response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
     }
-    return await f_response.text();
+    return await f_response.json();
 }

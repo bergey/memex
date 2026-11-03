@@ -1,3 +1,4 @@
+mod external_id;
 mod objid;
 
 use automerge::ObjId;
@@ -11,9 +12,9 @@ pub struct RecordId(#[serde(with = "objid")] pub ObjId);
 #[derive(PartialEq, Eq, Hash, Clone, Debug, Deserialize, Serialize)]
 pub struct TagId(#[serde(with = "objid")] pub ObjId);
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug, Serialize, Deserialize)]
-pub struct AuthToken(pub u128);
+pub struct AuthToken(#[serde(with = "external_id")] pub u128);
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug, Serialize, Deserialize)]
-pub struct UserId(u128);
+pub struct UserId(#[serde(with = "external_id")] u128);
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct LibraryId(pub u128);

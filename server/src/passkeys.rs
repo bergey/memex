@@ -36,7 +36,7 @@ pub async fn signup_start(State(pools): Pools) -> HttpResult<Json<CreationChalle
 pub async fn signup_finish(
   State(db): Pools,
   body: Json<RegisterPublicKeyCredential>,
-) -> HttpResult<Json<AuthToken>> {
+) -> HttpResult<Json<auth::AuthResponse>> {
   let attestation: AuthenticatorAttestationResponse<webauthn_rs_core::Registration> =
     AuthenticatorAttestationResponse::try_from(&body.0.response)?;
   let challenge = attestation.challenge();
@@ -54,7 +54,9 @@ pub async fn signup_finish(
   let auth_token = AuthToken::random();
   save_auth_token(&mut transaction, auth_token, user_id).await?;
   transaction.commit().await?;
-  Ok(Json(auth_token))
+  Ok(Json(auth::AuthResponse {
+    user_id, auth_token,
+  }))
 }
 
 /// login on a device that has a passkey
