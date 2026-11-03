@@ -34,7 +34,7 @@ pub async fn save_passkey(
   ciborium::into_writer(passkey, &mut encoded)?;
   query!(
     "insert into passkeys (cred_id, user_id, value) values ($1, $2, $3)",
-    passkey.cred_id().as_ref(),
+    &passkey.cred_id(),
     user_id_internal(transaction, user_id).await?,
     encoded
   )
