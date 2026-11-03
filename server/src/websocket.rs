@@ -4,12 +4,11 @@ use crate::metrics;
 use crate::observability::hist_time_since;
 use crate::prelude::*;
 use memex_shared::{AuthToken, Library, LibraryId, Message};
+use message::Reply;
 
 use automerge::sync::SyncDoc;
 use axum::{
-  extract::{
-    ws::{self, WebSocket, WebSocketUpgrade},
-  },
+  extract::ws::{self, WebSocket, WebSocketUpgrade},
   response::Response,
 };
 use std::collections::HashMap;
@@ -72,8 +71,9 @@ async fn sync_crdt_ws(pools: Pools, mut socket: WebSocket) {
                             warn!("{e}");
                             break;
                         }
-                        Ok(None) => { info!("received WS message, no reply") }
-                        Ok(Some((id, reply))) => {
+                        Ok(Reply::None) => { info!("received WS message, no reply") }
+                        Ok(Reply::NotAuthorized) => { break; }
+                        Ok(Reply::Library(id, reply)) => {
                             if try_send_library(&mut socket, reply, id, &mut client_state, "reply").await.is_err() {
                                 break;
                             }
@@ -140,7 +140,7 @@ async fn apply_ws_message_reply(
   state: &Pools,
   client_state: &mut Client,
   ws_msg: ws::Message,
-) -> anyhow::Result<Option<(LibraryId, Message)>> {
+) -> anyhow::Result<Reply> {
   let message = decode_message(ws_msg)?;
   message::apply_message_reply(&state.0.postgres, client_state, message).await
 }

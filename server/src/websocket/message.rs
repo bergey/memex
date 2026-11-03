@@ -5,19 +5,25 @@ use sqlx::PgPool;
 
 use automerge::sync::SyncDoc;
 
+pub enum Reply {
+  None,
+  Library(LibraryId, Message),
+  NotAuthorized,
+}
+
 pub async fn apply_message_reply(
   database: &PgPool,
   client_state: &mut super::Client,
   message: Message,
-) -> anyhow::Result<Option<(LibraryId, Message)>> {
+) -> anyhow::Result<Reply> {
   match message {
     Message::Authorize(token) => {
       client_state.auth_token = Some(token);
-      Ok(None)
+      Ok(Reply::None)
     }
     Message::LibraryId(id) => {
       client_state.library_in = Some(id);
-      Ok(None)
+      Ok(Reply::None)
     }
     Message::Library(am_msg) => {
       metrics::AUTOMERGE_MESSAGE_RECEIVED.inc();
@@ -25,7 +31,7 @@ pub async fn apply_message_reply(
         .library_in
         .ok_or_else(|| anyhow::anyhow!("sync message before Library ID set"))?;
       match authorized(database, client_state.auth_token, id).await? {
-        None => anyhow::bail!("not authorized: {:?}", client_state.auth_token),
+        None => Ok(Reply::NotAuthorized),
         Some(user_id) => {
           let am_state = client_state.get_am(id);
           let mut document =
@@ -35,7 +41,10 @@ pub async fn apply_message_reply(
             replicated: document.clone(),
           });
           let o_reply = document.sync().generate_sync_message(am_state);
-          Ok(o_reply.map(|msg| (id, Message::Library(msg))))
+          match o_reply {
+            None => Ok(Reply::None),
+            Some(msg) => Ok(Reply::Library(id, Message::Library(msg)))
+          }
         }
       }
     }
