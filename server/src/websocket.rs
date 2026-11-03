@@ -34,7 +34,7 @@ impl Client {
       library_out: None,
       library_in: None,
       // workaround until I implement second-device login
-      auth_token: Some(AuthToken(0)),
+      auth_token: None,
     }
   }
 
