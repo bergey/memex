@@ -5,6 +5,7 @@ use sqlx::PgPool;
 
 use automerge::sync::SyncDoc;
 
+#[derive(Clone, Debug)]
 pub enum Reply {
   None,
   Library(LibraryId, Message),
@@ -71,12 +72,14 @@ pub mod tests {
   use super::*;
   use crate::websocket::Client;
 
+  use std::assert_matches;
+
   #[sqlx::test]
   async fn set_library_id(pool: PgPool) {
     let mut client_state = Client::new();
     let l_id = LibraryId(123);
     let reply = apply_message_reply(&pool, &mut client_state, Message::LibraryId(l_id)).await.unwrap();
-    assert!(reply.is_none());
+    assert_matches!(reply, Reply::None);
     assert_eq!(client_state.library_in, Some(l_id));
   }
 }
