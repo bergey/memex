@@ -1,8 +1,5 @@
 use crate::prelude::*;
-use memex_shared::{AuthToken, UserId};
-use memex_shared::auth::AuthResponse;
-
-use wasm_bindgen::prelude::*;
+use memex_;
 
 pub fn load_auth_token() -> Option<AuthToken> {
   let storage = local_storage()?;
@@ -18,12 +15,14 @@ pub fn save_auth_token(auth_token: AuthToken) {
   }
 }
 
-pub async fn signup_and_store() {
+pub async fn signup_and_store(tx: ToWorker<Action>) {
   if let Some(resp) = signup().await.log_error()
     && let Some(resp) = serde_wasm_bindgen::from_value::<AuthResponse>(resp).log_error()
   {
     save_auth_token(resp.auth_token);
     save_user_id(resp.user_id);
+    // TODO extend messages we can send to worker / server
+    tx.send(Action::Authorize(resp.auth_token))
   }
 }
 
