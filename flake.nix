@@ -14,6 +14,7 @@
         buildAndTestSubdir = "server";
         buildNoDefaultFeatures = true;
         nativeBuildInputs = [pkgs.pkg-config pkgs.mold];
+        DATABASE_URL = "postgres://sqlx:sqlx@localhost/memex-dev";
         cargoLock = {
           lockFile = ./Cargo.lock;
 
