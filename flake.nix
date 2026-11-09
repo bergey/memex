@@ -19,7 +19,7 @@
           lockFile = ./Cargo.lock;
 
           outputHashes = {
-            "base64urlsafedata-0.5.5" = "sha256-I16UpVkclt2SdzFA0/5dPY9uIdvTs7XFF0Ll5iKxoXE=";
+            "webauthn-attestation-ca-0.6.2" = "sha256-V+jnyLMH+FpoJ7ICzkxczlu0YHdk7QOn/5Ehxmxq5c0=";
           };
         };
       };
