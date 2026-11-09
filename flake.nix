@@ -13,8 +13,7 @@
         src = ./.;
         buildAndTestSubdir = "server";
         buildNoDefaultFeatures = true;
-        buildInputs = [pkgs.openssl];
-        nativeBuildInputs = [pkgs.pkg-config];
+        nativeBuildInputs = [pkgs.pkg-config pkgs.mold];
         cargoLock = {
           lockFile = ./Cargo.lock;
 
