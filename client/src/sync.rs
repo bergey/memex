@@ -16,11 +16,15 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 use web_sys::WebSocket;
 
+/// From browser tab to shared Worker
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub enum ToWorker {}
+pub enum ToWorker {
+  Library(Action),
+}
 
+/// from shared worker to browser Tabs (broadcast)
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub enum ToClient {}
+pub enum ToTabs {}
 
 #[derive(Debug, Clone, Copy)]
 pub enum ConnStatus {
@@ -42,7 +46,7 @@ pub enum WebsocketBackoff {
   Backoff(u32),
 }
 
-static ACTION_Q: LazyLock<Mutex<Option<Sender<Action>>>> = LazyLock::new(|| Mutex::new(None));
+static ACTION_Q: LazyLock<Mutex<Option<Sender<ToWorker>>>> = LazyLock::new(|| Mutex::new(None));
 
 #[wasm_bindgen]
 pub async fn setup_shared(server_ws_url: Option<String>) {
@@ -95,7 +99,7 @@ fn action_callback() -> Closure<dyn FnMut(web_sys::MessageEvent)> {
 
 async fn shared_worker_thread(
   mut library: Library,
-  mut rx_a: Receiver<Action>,
+  mut rx_t: Receiver<ToWorker>,
   mut rx_down: Receiver<Message>,
   mut rx_c: Receiver<ConnStatus>,
   mut tx_up: Sender<Message>,
@@ -105,8 +109,9 @@ async fn shared_worker_thread(
   let mut broadcaster = BrowserPort::broadcast("shared_worker");
   loop {
     select! {
-       r_action = rx_a.recv() => {
-            let action = r_action.context("rx_action").unwrap();
+       r_from_tab = rx_t.recv() => {
+         match  r_from_tab.context("rx_to_worker").unwrap() {
+           ToWorker::Library(action) => {
            let patches = library.apply(&action);
            crate::disk::save_library(&mut library);
            for p in patches {
@@ -117,6 +122,8 @@ async fn shared_worker_thread(
                    tx_up.send(Message::Library(message))
                }
            }
+           }
+         }
        },
 
         r_down = rx_down.recv() => {
