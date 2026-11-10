@@ -1,5 +1,8 @@
 use crate::prelude::*;
-use memex_;
+use memex_shared::{AuthToken, UserId};
+use memex_shared::auth::AuthResponse;
+
+use wasm_bindgen::prelude::*;
 
 pub fn load_auth_token() -> Option<AuthToken> {
   let storage = local_storage()?;
