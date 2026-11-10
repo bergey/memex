@@ -30,6 +30,9 @@ impl super::ServerSync {
       handle.connect().await;
       loop {
         let msg = rx_up.recv().await.expect("_up channel closed");
+        if let Message::Authorize(_) = msg {
+          handle.connect().await; // does it matter if we're already connected?
+        }
         handle.send(&msg).await;
       }
     });
