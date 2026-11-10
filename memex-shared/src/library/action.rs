@@ -21,6 +21,7 @@ pub enum Action {
 }
 
 // Events represent changes, local or remote.  IDs are all known
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Event {
   SetName(String),
   AddRecord(usize, RecordId),
@@ -48,7 +49,7 @@ fn date_from(i: i64) -> date::Date {
 
 impl Event {
   pub fn from_patch(patch: automerge::patches::Patch) -> Result<Self> {
-    use Event::*;
+    use self::Event::*;
     use RecordField::*;
     use automerge::patches::PatchAction::*;
     debug!("{:?}", patch);

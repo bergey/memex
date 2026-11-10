@@ -44,7 +44,7 @@ impl ReactiveLibrary {
   }
 
   pub fn apply(&mut self, event: Event) {
-    debug!(?action, "entering ReactiveLibrary::apply");
+    debug!(?event, "entering ReactiveLibrary::apply");
     use memex_shared::library::action::{Event::*, RecordField::*};
     match event {
       SetName(name) => {

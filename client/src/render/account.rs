@@ -8,7 +8,6 @@ use wasm_bindgen_futures::spawn_local;
 #[component]
 pub fn Account() -> impl IntoView {
   let o_auth_token = auth::load_auth_token();
-  let tx = use_worker_channel();
 
   if o_auth_token.is_some() {
     p().child("placeholder").into_any()
@@ -16,9 +15,9 @@ pub fn Account() -> impl IntoView {
     button()
       .child("sign up")
       .on(event::click, {
-        let tx = tx.clone();
+        let tx = super::use_worker_channel();
         move |_| {
-          spawn_local(auth::signup_and_store(tx));
+          spawn_local(auth::signup_and_store(tx.clone()));
         }
       })
       .into_any()

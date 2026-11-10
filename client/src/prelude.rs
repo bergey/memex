@@ -57,12 +57,12 @@ impl<T: Debug> Sender<T> {
 }
 
 #[derive(Clone, Debug)]
-pub enum ToWorker<T> {
+pub enum BrowserPort<T> {
   Broadcast(web_sys::BroadcastChannel, PhantomData<T>),
   Port(web_sys::MessagePort, PhantomData<T>),
 }
 
-impl<T: Serialize> ToWorker<T> {
+impl<T: Serialize> BrowserPort<T> {
   pub fn broadcast(name: &str) -> Self {
     let broadcast = web_sys::BroadcastChannel::new(name)
       .log_error()

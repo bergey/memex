@@ -10,7 +10,7 @@ use leptos::html::*;
 use leptos::prelude::*;
 use leptos::tachys::html::event;
 
-pub fn details(tx: ToWorker<Action>, selected: RwSignal<Option<Record>>) -> impl IntoView {
+pub fn details(tx: BrowserPort<Action>, selected: RwSignal<Option<Record>>) -> impl IntoView {
   // update CRDT only on blur.  Accept lost edits if remote change comes through before blur
   // someday if I build a history UI that supports AM get_all / manual conflict resolution, consider flushing dirty fields
   move || {
@@ -57,7 +57,7 @@ pub fn details(tx: ToWorker<Action>, selected: RwSignal<Option<Record>>) -> impl
               .on(event::click, {
                 let mut tx = tx.clone();
                 let id = selected.id.clone();
-                move |_| tx.send(&Action::AddTag(id.clone(), ()))
+                move |_| tx.send(&Action::AddTag(id.clone()))
               })
               .child("Add Tag"),
             ul().child(For(ForProps {
@@ -98,7 +98,7 @@ pub fn details(tx: ToWorker<Action>, selected: RwSignal<Option<Record>>) -> impl
 }
 
 fn field<T>(
-  tx: ToWorker<Action>,
+  tx: BrowserPort<Action>,
   id: RecordId,
   name: &'static str,
   field: RwSignal<String>,

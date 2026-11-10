@@ -27,7 +27,7 @@ pub fn start(worker_port: web_sys::MessagePort) -> Result<()> {
       cb.forget();
     }
 
-    let to_worker = ToWorker::port(worker_port);
+    let to_worker = BrowserPort::port(worker_port);
     let _ = leptos::mount::mount_to_body(move || view! { <render::Body reactive=reactive tx=to_worker />});
   });
 

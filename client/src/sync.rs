@@ -10,18 +10,17 @@ use memex_shared::{
 use automerge::sync::SyncDoc;
 use futures::channel::mpsc::Receiver;
 use futures::select;
+use serde::{Deserialize, Serialize};
 use std::sync::{LazyLock, Mutex};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 use web_sys::WebSocket;
 
-pub enum ToWorker {
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub enum ToWorker {}
 
-}
-
-pub enum ToClient {
-
-}
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub enum ToClient {}
 
 #[derive(Debug, Clone, Copy)]
 pub enum ConnStatus {
@@ -81,9 +80,7 @@ pub fn connect_tab(port: web_sys::MessagePort) {
 fn action_callback() -> Closure<dyn FnMut(web_sys::MessageEvent)> {
   let lock = ACTION_Q.lock().unwrap();
   let mut tx = match &*lock {
-    Some(tx) => {
-      tx.clone()
-    }
+    Some(tx) => tx.clone(),
     None => {
       error!("action_callback before setup_shared");
       Sender::new(0).0
@@ -105,7 +102,7 @@ async fn shared_worker_thread(
 ) {
   let mut sync_state = automerge::sync::State::new();
   let mut connected = false;
-  let mut broadcaster = ToWorker::broadcast("shared_worker");
+  let mut broadcaster = BrowserPort::broadcast("shared_worker");
   loop {
     select! {
        r_action = rx_a.recv() => {
