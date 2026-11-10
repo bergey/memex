@@ -5,7 +5,7 @@ mod list;
 
 use crate::prelude::*;
 use crate::sync::ToWorker;
-use memex_shared::library::{RecordId, TagId, action::Action};
+use memex_shared::library::{RecordId, TagId};
 
 use leptos::html::*;
 use leptos::prelude::*;
@@ -14,7 +14,7 @@ use leptos_router::path;
 use std::collections::HashSet;
 
 #[component]
-pub fn Body(reactive: ReactiveLibrary, tx: BrowserPort<Action>) -> impl IntoView {
+pub fn Body(reactive: ReactiveLibrary, tx: BrowserPort<ToWorker>) -> impl IntoView {
   provide_context(reactive.clone());
   provide_context(tx.clone());
   view! {
@@ -29,7 +29,7 @@ pub fn Body(reactive: ReactiveLibrary, tx: BrowserPort<Action>) -> impl IntoView
   }
 }
 
-fn library_page(reactive: ReactiveLibrary, tx: BrowserPort<Action>) -> impl IntoView {
+fn library_page(reactive: ReactiveLibrary, tx: BrowserPort<ToWorker>) -> impl IntoView {
   (
     search(reactive.clone()),
     list::list_section(reactive.clone(), tx.clone()),

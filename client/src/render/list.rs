@@ -1,5 +1,6 @@
 use super::Record;
 use crate::prelude::*;
+use crate::sync::ToWorker;
 use memex_shared::library::action::Action;
 
 use memex_query::*;
@@ -8,7 +9,7 @@ use leptos::html::*;
 use leptos::prelude::*;
 use leptos::tachys::html::event;
 
-pub fn list_section(library: super::ReactiveLibrary, tx: BrowserPort<Action>) -> impl IntoView {
+pub fn list_section(library: super::ReactiveLibrary, tx: BrowserPort<ToWorker>) -> impl IntoView {
   let mut library_add_button = tx.clone();
   let selected_id = {
     let selected = library.selected.clone();
@@ -31,7 +32,7 @@ pub fn list_section(library: super::ReactiveLibrary, tx: BrowserPort<Action>) ->
   section().id("list").child((
     div().class("menu").child((button()
       .on(event::click, move |_| {
-        library_add_button.send(&Action::AddRecord);
+        library_add_button.send(&ToWorker::Library(Action::AddRecord));
       })
       .child("Add"),)),
     table().child((

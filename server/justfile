@@ -1,0 +1,4 @@
+[env("RUST_LOG", "debug")]
+[env("LOG_FORMAT", "pretty")]
+run:
+  cargo run
