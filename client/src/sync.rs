@@ -2,6 +2,7 @@ mod connect;
 mod server;
 
 use crate::prelude::*;
+use memex_shared::AuthToken;
 use memex_shared::{
   library::{Library, action::Action},
   message::Message,
@@ -20,6 +21,7 @@ use web_sys::WebSocket;
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum ToWorker {
   Library(Action),
+  Authenticate(AuthToken),
 }
 
 /// from shared worker to browser Tabs (broadcast)
@@ -122,7 +124,8 @@ async fn shared_worker_thread(
                    tx_up.send(Message::Library(message))
                }
            }
-           }
+           },
+           ToWorker::Authenticate(token) => tx_up.send(Message::Authorize(token))
          }
        },
 

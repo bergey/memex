@@ -19,14 +19,13 @@ pub fn save_auth_token(auth_token: AuthToken) {
   }
 }
 
-pub async fn signup_and_store(_tx: BrowserPort<ToWorker>) {
+pub async fn signup_and_store(mut tx: BrowserPort<ToWorker>) {
   if let Some(resp) = signup().await.log_error()
     && let Some(resp) = serde_wasm_bindgen::from_value::<AuthResponse>(resp).log_error()
   {
     save_auth_token(resp.auth_token);
     save_user_id(resp.user_id);
-    // TODO extend messages we can send to worker / server
-    // tx.send(Action::Authorize(resp.auth_token))
+    tx.send(&ToWorker::Authenticate(resp.auth_token))
   }
 }
 
