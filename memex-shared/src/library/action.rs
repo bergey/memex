@@ -7,16 +7,28 @@ use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 // use wasm_bindgen::JsValue;
 
-// add is () when starting an edit, (usize, ObjId) when finishing
+// TODO reconsider Delete IDs.  Should not need to scan all records.
+// Actions on the Library, before IDs are known
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub enum Action<AR = (), DR = RecordId, AT = (), DT = TagId> {
+pub enum Action {
   SetName(String),
-  AddRecord(AR),
+  AddRecord,
   SetRecord(RecordId, RecordField),
-  DeleteRecord(DR),
-  AddTag(RecordId, AT),
+  DeleteRecord(RecordId),
+  AddTag(RecordId),
   SetTag(RecordId, TagId, String),
-  DeleteTag(RecordId, DT),
+  DeleteTag(RecordId, TagId),
+}
+
+// Events represent changes, local or remote.  IDs are all known
+pub enum Event {
+  SetName(String),
+  AddRecord(usize, RecordId),
+  SetRecord(RecordId, RecordField),
+  DeleteRecord(usize),
+  AddTag(RecordId, TagId),
+  SetTag(RecordId, TagId, String),
+  DeleteTag(RecordId, usize),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -29,7 +41,6 @@ pub enum RecordField {
   DateAdded(date::Date),
   ReadLast(date::Date),
 }
-pub type Event = Action<(usize, RecordId), usize, TagId, usize>;
 
 fn date_from(i: i64) -> date::Date {
   date::Date::from_i64(i)
@@ -37,7 +48,7 @@ fn date_from(i: i64) -> date::Date {
 
 impl Event {
   pub fn from_patch(patch: automerge::patches::Patch) -> Result<Self> {
-    use Action::*;
+    use Event::*;
     use RecordField::*;
     use automerge::patches::PatchAction::*;
     debug!("{:?}", patch);
@@ -77,10 +88,10 @@ impl Event {
             }
           }
           (1, DeleteSeq { index, length: 1 }) => Ok(DeleteRecord(index)),
-          (1, Insert { index, values }) if values.len() == 1 => Ok(AddRecord((
+          (1, Insert { index, values }) if values.len() == 1 => Ok(AddRecord(
             index,
             RecordId(values.iter().next().unwrap().1.clone()),
-          ))),
+          )),
           (3, Insert { .. }) => Ok(AddTag(
             RecordId(patch.path.last().unwrap().0.clone()),
             TagId(patch.obj),
@@ -131,7 +142,7 @@ pub mod tests {
   #[test]
   fn add_record_len() {
     let mut lib = Library::new(ActorId::random());
-    lib.apply(&AddRecord(()));
+    lib.apply(&AddRecord);
     assert_eq!(lib.records().collect::<Vec<_>>().len(), 1);
   }
 
@@ -139,21 +150,11 @@ pub mod tests {
   fn set_title() {
     let t = "my title".to_string();
     let mut lib = Library::new(ActorId::random());
-    lib.apply(&AddRecord(()));
+    lib.apply(&AddRecord);
     let first = lib.records().next().unwrap();
     lib.apply(&SetRecord(first.id, Title(t.clone())));
     let after = lib.records().next().unwrap();
     assert_eq!(after.title, t);
-  }
-
-  fn adds_and_deletes() -> impl Strategy<Value = Action<(), usize>> {
-    prop_oneof![
-      // For cases without data, `Just` is all you need
-      Just(AddRecord(())),
-      // For cases with data, write a strategy for the interior data, then
-      // map into the actual enum case.
-      any::<usize>().prop_map(DeleteRecord)
-    ]
   }
 
   proptest! {
@@ -170,25 +171,24 @@ pub mod tests {
               // without discarding test runs
               let mut lib = Library::new(ActorId::random());
               for _ in 0..n {
-                  lib.apply(&AddRecord(()));
+                  lib.apply(&AddRecord);
               }
               let record_id = lib.records().map(|r| r.id).nth(i % n).unwrap();
               lib.apply(&DeleteRecord(record_id));
           }
 
       #[test]
-      fn adds_and_deletes_seq(actions in prop::collection::vec(adds_and_deletes(), 1..30)) {
+      fn adds_and_deletes_seq(actions in prop::collection::vec(proptest::option::of(any::<usize>()), 1..30)) {
           let mut lib = Library::new(ActorId::random());
           for a in actions {
               let record_ids = lib.records().map(|r| r.id).collect::<Vec<_>>();
               let act = match a {
-                  AddRecord(()) => AddRecord(()), // technically a different type
-                  DeleteRecord(i) => if record_ids.len() == 0 {
-                      AddRecord(())
+                  None => AddRecord,
+                  Some(i) => if record_ids.len() == 0 {
+                      AddRecord
                   } else {
                       DeleteRecord(record_ids[i % record_ids.len()].clone())
-                  },
-                  _ => panic!("not reachable with this generator"),
+                  }
               };
               let _ = lib.apply(&act);
           }

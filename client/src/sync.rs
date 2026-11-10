@@ -15,6 +15,14 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 use web_sys::WebSocket;
 
+pub enum ToWorker {
+
+}
+
+pub enum ToClient {
+
+}
+
 #[derive(Debug, Clone, Copy)]
 pub enum ConnStatus {
   Connected,

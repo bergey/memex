@@ -81,6 +81,6 @@ fn use_library() -> Option<ReactiveLibrary> {
 }
 
 #[allow(dead_code)]
-fn use_worker_channel() -> Option<ToWorker<Action>> {
-  use_context()
+fn use_worker_channel() -> ToWorker<Action> {
+  use_context().expect("use_worker_channel")
 }

@@ -99,14 +99,14 @@ impl Library {
       })
   }
 
-  pub fn apply(&mut self, action: &Action<()>) -> Vec<Event> {
+  pub fn apply(&mut self, action: &Action) -> Vec<Event> {
     use action::Action::*;
     match action {
       SetName(name) => {
         self.replicated.put(Root, "name", name).unwrap();
       }
 
-      AddRecord(()) => {
+      AddRecord => {
         let r_id = self.add_to_set(&self.records_id(), ObjType::Map);
         // consider hydrating from Record type
         self
@@ -135,7 +135,7 @@ impl Library {
         self.remove_from_set(&self.records_id(), item_id);
       }
 
-      AddTag(RecordId(r_id), _) => {
+      AddTag(RecordId(r_id)) => {
         let tags = self.ensure_set(r_id, "tags").unwrap();
         let len = self.replicated.length(&tags);
         self.replicated.insert(&tags, len, "").unwrap();

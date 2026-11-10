@@ -43,15 +43,15 @@ impl ReactiveLibrary {
     }
   }
 
-  pub fn apply(&mut self, action: Event) {
+  pub fn apply(&mut self, event: Event) {
     debug!(?action, "entering ReactiveLibrary::apply");
-    use memex_shared::library::action::{Action::*, RecordField::*};
-    match action {
+    use memex_shared::library::action::{Event::*, RecordField::*};
+    match event {
       SetName(name) => {
         self.name.set(name);
       }
 
-      AddRecord((ix, r_id)) => self.records.update(|rs| {
+      AddRecord(ix, r_id) => self.records.update(|rs| {
         let tags = RwSignal::new(Vec::new());
         rs.insert(
           ix,
