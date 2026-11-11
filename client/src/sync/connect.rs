@@ -7,8 +7,11 @@ use web_sys::{MessageEvent, WebSocket};
 
 impl super::ServerSync {
   pub async fn connect(&mut self) {
+    // TODO pass token into this method?
     match crate::auth::load_auth_token() {
-      None => {} // TODO refresh, or login if user ID is known
+      None => {
+        debug!("skipping WS connect because we have no auth token");
+      } // TODO refresh, or login if user ID is known
       Some(auth_token) => {
         while let WebsocketBackoff::Backoff(exponent) = self.ws {
           match WebSocket::new(&self.url) {
@@ -21,7 +24,7 @@ impl super::ServerSync {
               while ws.ready_state() == 0 {
                 sleep(30).await;
               }
-              if self.try_send(&memex_shared::Message::Authorize(auth_token)) {
+              if let super::server::Outcome::Success = self.try_send(&memex_shared::Message::Authorize(auth_token)) {
                 self.ws = WebsocketBackoff::Connected(ws.clone());
                 self.tx_c.send(ConnStatus::Connected);
               }

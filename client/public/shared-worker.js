@@ -7,8 +7,8 @@ onconnect = async function (event) {
   await navigator.locks.request("sync_init", async (_lock) => {
     if (!wasm_initialized) {
       await init();
-      // await setup_shared("ws://localhost:3036/ws");
-      await setup_shared();
+      await setup_shared("ws://localhost:3036/ws");
+      /* await setup_shared(); */
       wasm_initialized = true;
     }
   });

@@ -6,6 +6,13 @@ use memex_shared::message::Message;
 use futures::channel::mpsc as channel;
 use wasm_bindgen_futures::spawn_local;
 
+#[derive(Debug)]
+pub(super) enum Outcome {
+  Success,
+  Reconnect,
+  Drop,
+}
+
 impl super::ServerSync {
   // spawns a long-lived task
   pub fn start(
@@ -30,9 +37,6 @@ impl super::ServerSync {
       handle.connect().await;
       loop {
         let msg = rx_up.recv().await.expect("_up channel closed");
-        if let Message::Authorize(_) = msg {
-          handle.connect().await; // does it matter if we're already connected?
-        }
         handle.send(&msg).await;
       }
     });
@@ -40,35 +44,38 @@ impl super::ServerSync {
     (tx_up, rx_down, rx_c)
   }
 
-  // no retry limit, but exponential backoff via connect,
-  // and when the queue of messages to send fills up, we drop any further
-  // so if we finally connect before user restarts, we send the oldest messages,
-  // AM ensures sync
-  // maybe instead we should drop here if no WS, count on sync-all immediately after connect?
   async fn send(&mut self, message: &Message) {
-    while !self.try_send(message) {
+    if let Message::Authorize(_) = message {
+      // attempt to connect if we just got a new auth token
+      debug!("connect WS to send Authorize");
+      self.connect().await; // does it matter if we're already connected?
+    }
+    let outcome = self.try_send(message);
+    debug!(?outcome);
+    if let Outcome::Reconnect = outcome {
+      // connect if this is the first message we tried to send since a connection error
       self.connect().await;
+      let _ = self.try_send(message);
     }
   }
 
   // true on success
-  pub (super) fn try_send(&mut self, message: &Message) -> bool {
+  pub(super) fn try_send(&mut self, message: &Message) -> Outcome {
     match &self.ws {
       WebsocketBackoff::Backoff(_) => {
-        warn!("websocket backoff in send.  should not be reachable");
-        return false;
+        return Outcome::Drop;
       }
       WebsocketBackoff::Connected(ws) => {
         if ws.ready_state() > 1 {
           self.disconnected();
-          return false;
+          return Outcome::Reconnect;
         }
         if let Err(e) = ws.send_with_u8_array(&message.encode()) {
           debug!(?e, "WS error in send");
           self.disconnected();
-          return false;
+          return Outcome::Reconnect;
         }
-        return true; // successful send, done
+        return Outcome::Success;
       }
     }
   }

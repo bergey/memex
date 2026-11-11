@@ -6,8 +6,11 @@ use memex_shared::{AuthToken, UserId};
 use wasm_bindgen::prelude::*;
 
 pub fn load_auth_token() -> Option<AuthToken> {
-  let storage = local_storage()?;
-  let s = storage.get_item("auth_token").log_error().flatten()?;
+  let o_storage = local_storage();
+  if o_storage.is_none() {
+    info!("local storage not available");
+  }
+  let s = o_storage?.get_item("auth_token").log_error().flatten()?;
   AuthToken::from_str(s.as_ref())
 }
 
@@ -25,6 +28,7 @@ pub async fn signup_and_store(mut tx: BrowserPort<ToWorker>) {
   {
     save_auth_token(resp.auth_token);
     save_user_id(resp.user_id);
+    debug!("saved auth token, trying to connect WS");
     tx.send(&ToWorker::Authenticate(resp.auth_token))
   }
 }
