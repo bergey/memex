@@ -14,7 +14,12 @@
         buildAndTestSubdir = "server";
         buildNoDefaultFeatures = true;
         nativeBuildInputs = [pkgs.pkg-config pkgs.mold];
-        DATABASE_URL = "postgres://sqlx:sqlx@localhost/memex-dev";
+        nativeCheckInputs = [
+          pkgs.postgresql
+          pkgs.postgresqlTestHook
+        ];
+        # DATABASE_URL = "postgres:///$PGDATABASE?user=$PGUSER&host=$PGHOST";
+        # DATABASE_URL = "postgres:///test_db?user=test_user";
         cargoLock = {
           lockFile = ./Cargo.lock;
 
