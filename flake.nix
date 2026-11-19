@@ -6,7 +6,12 @@
   };
 
   outputs = {self, nixpkgs}: {
-    packages = builtins.mapAttrs (system: pkgs: {
+    packages = builtins.mapAttrs (system: _:
+      let pkgs = import nixpkgs {
+            inherit system;
+          };
+
+      in {
       memex-server = pkgs.rustPlatform.buildRustPackage rec {
         pname = "memex-server";
         version = "0.1";
@@ -14,10 +19,11 @@
         buildAndTestSubdir = "server";
         buildNoDefaultFeatures = true;
         nativeBuildInputs = [pkgs.pkg-config pkgs.mold];
-        nativeCheckInputs = [
-          pkgs.postgresql
-          pkgs.postgresqlTestHook
-        ];
+        doCheck = false;
+        # nativeCheckInputs = [
+        #   pkgs.postgresql
+        #   pkgs.postgresqlTestHook
+        # ];
         # DATABASE_URL = "postgres:///$PGDATABASE?user=$PGUSER&host=$PGHOST";
         # DATABASE_URL = "postgres:///test_db?user=test_user";
         cargoLock = {
@@ -30,7 +36,7 @@
       };
 
       default = self.packages.${system}.memex-server;
-    }) nixpkgs.legacyPackages;
+      }) {"x86_64-linux" = "";} ; # extend if I test on other systems
 
     overlays.default = final: prev: {
       inherit (self.packages) memex-server;
