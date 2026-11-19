@@ -125,7 +125,10 @@ async fn shared_worker_thread(
                }
            }
            },
-           ToWorker::Authenticate(token) => tx_up.send(Message::Authorize(token))
+           ToWorker::Authenticate(token) => {
+             tx_up.send(Message::Authorize(token));
+             crate::auth::save_auth_token(token).await;
+           }
          }
        },
 

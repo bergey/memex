@@ -8,7 +8,7 @@ use web_sys::{MessageEvent, WebSocket};
 impl super::ServerSync {
   pub async fn connect(&mut self) {
     // TODO pass token into this method?
-    match crate::auth::load_auth_token() {
+    match crate::auth::load_auth_token().await {
       None => {
         debug!("skipping WS connect because we have no auth token");
       } // TODO refresh, or login if user ID is known

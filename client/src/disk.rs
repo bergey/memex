@@ -105,9 +105,9 @@ async fn try_load_some_library() -> OpenDbResult<Option<(JsValue, JsValue)>> {
   Ok(kv)
 }
 
-async fn open_database() -> OpenDbResult<Database> {
+pub async fn open_database() -> OpenDbResult<Database> {
   Database::open("memex")
-    .with_version(3u8)
+    .with_version(4u8)
     .with_on_blocked(|event| {
       error!(?event, "DB upgrade blocked");
       Ok(())
@@ -116,13 +116,15 @@ async fn open_database() -> OpenDbResult<Database> {
       // Convert versions from floats to integers to allow using them in match expressions
       let old_version = event.old_version() as u64;
       let new_version = event.new_version().map(|v| v as u64);
+      // Some > None, so run no migrations if we are deleting the DB
+      let for_version = |i| { old_version < i && new_version >= Some(i) };
 
-      match (old_version, new_version) {
-        (_, Some(3)) => {
-          db.create_object_store("libraries").build()?;
-        }
-        _ => {}
-      };
+      if for_version(3) {
+        db.create_object_store("libraries").build()?;
+      }
+      if for_version(4) {
+        db.create_object_store("account").build()?;
+      }
       Ok(())
     })
     .await

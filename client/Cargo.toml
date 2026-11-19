@@ -15,7 +15,7 @@ automerge.workspace = true
 console_error_panic_hook = "0.1.7"
 futures = "0.3.34"
 getrandom = { workspace = true, features = ['wasm_js'] }
-indexed_db_futures = { version = "0.6.4", features = ["typed-arrays"] }
+indexed_db_futures = { version = "0.6.4", features = ["typed-arrays", "serde" ] }
 js-sys = "0.3.106"
 leptos = { version = "0.8.22", features = ["csr"] }
 tracing.workspace = true

@@ -7,11 +7,11 @@ use wasm_bindgen_futures::spawn_local;
 
 #[component]
 pub fn Account() -> impl IntoView {
-  let o_auth_token = auth::load_auth_token();
+  // TODO track auth state some other way
+  // let o_auth_token = auth::load_auth_token().await;
 
-  if o_auth_token.is_some() {
-    p().child("placeholder").into_any()
-  } else {
+  // if o_auth_token.is_some() {
+  //   p().child("placeholder").into_any()
     button()
       .child("sign up")
       .on(event::click, {
@@ -21,5 +21,4 @@ pub fn Account() -> impl IntoView {
         }
       })
       .into_any()
-  }
 }

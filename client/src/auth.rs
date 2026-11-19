@@ -1,32 +1,40 @@
+use crate::disk::open_database;
 use crate::prelude::*;
 use crate::sync::ToWorker;
 use memex_shared::auth::AuthResponse;
 use memex_shared::{AuthToken, UserId};
 
+use indexed_db_futures::prelude::*;
+use indexed_db_futures::transaction::TransactionMode;
 use wasm_bindgen::prelude::*;
 
-pub fn load_auth_token() -> Option<AuthToken> {
-  let o_storage = local_storage();
-  if o_storage.is_none() {
-    info!("local storage not available");
-  }
-  let s = o_storage?.get_item("auth_token").log_error().flatten()?;
-  AuthToken::from_str(s.as_ref())
+pub async fn load_auth_token() -> Option<AuthToken> {
+  let db = open_database().await.log_error()?;
+  let tx = db
+    .transaction("account")
+    .with_mode(TransactionMode::Readonly)
+    .build()
+    .log_error()?;
+  let store = tx.object_store("account").log_error()?;
+  store.get("auth_token").serde().log_error()?.await.log_error()?
 }
 
-pub fn save_auth_token(auth_token: AuthToken) {
-  if let Some(storage) = local_storage() {
-    storage
-      .set_item("auth_token", &auth_token.to_string())
-      .log_error();
-  }
+pub async fn save_auth_token(auth_token: AuthToken) -> Option<()> {
+  let db = open_database().await.log_error()?;
+  let tx = db
+    .transaction("account")
+    .with_mode(TransactionMode::Readwrite)
+    .build()
+    .log_error()?;
+  let store = tx.object_store("account").log_error()?;
+  store.put(auth_token).with_key("auth_token".to_string()).serde().log_error()?.await.log_error()?;
+  Some(())
 }
 
 pub async fn signup_and_store(mut tx: BrowserPort<ToWorker>) {
   if let Some(resp) = signup().await.log_error()
     && let Some(resp) = serde_wasm_bindgen::from_value::<AuthResponse>(resp).log_error()
   {
-    save_auth_token(resp.auth_token);
     save_user_id(resp.user_id);
     debug!("saved auth token, trying to connect WS");
     tx.send(&ToWorker::Authenticate(resp.auth_token))
