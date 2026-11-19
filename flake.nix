@@ -3,16 +3,28 @@
 
   inputs = {
     nixpkgs.url = "https://channels.nixos.org/nixpkgs-unstable/nixexprs.tar.zst";
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = {self, nixpkgs}: {
+  outputs = {self, nixpkgs, rust-overlay}: {
     packages = builtins.mapAttrs (system: _:
-      let pkgs = import nixpkgs {
-            inherit system;
-          };
-
+      let
+        pkgs = import nixpkgs {
+          inherit system;
+          overlays = [ (import rust-overlay) ];
+        };
+        systems = {"x86_64-linux" = "";} ; # extend if I test on other systems
+        # rust-bin = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
+        rust-bin = pkgs.rust-bin.stable.latest.minimal;
+        rustPlatform = pkgs.makeRustPlatform {
+          cargo = rust-bin;
+          rustc = rust-bin;
+        };
       in {
-      memex-server = pkgs.rustPlatform.buildRustPackage rec {
+      memex-server = rustPlatform.buildRustPackage rec {
         pname = "memex-server";
         version = "0.1";
         src = ./.;
@@ -36,7 +48,7 @@
       };
 
       default = self.packages.${system}.memex-server;
-      }) {"x86_64-linux" = "";} ; # extend if I test on other systems
+      }) systems;
 
     overlays.default = final: prev: {
       inherit (self.packages) memex-server;
