@@ -16,7 +16,6 @@
           inherit system;
           overlays = [ (import rust-overlay) ];
         };
-        systems = {"x86_64-linux" = "";} ; # extend if I test on other systems
         # rust-bin = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
         rust-bin = pkgs.rust-bin.stable.latest.minimal;
         rustPlatform = pkgs.makeRustPlatform {
@@ -30,14 +29,13 @@
         src = ./.;
         buildAndTestSubdir = "server";
         buildNoDefaultFeatures = true;
-        nativeBuildInputs = [pkgs.pkg-config pkgs.mold];
-        doCheck = false;
-        # nativeCheckInputs = [
-        #   pkgs.postgresql
-        #   pkgs.postgresqlTestHook
-        # ];
-        # DATABASE_URL = "postgres:///$PGDATABASE?user=$PGUSER&host=$PGHOST";
-        # DATABASE_URL = "postgres:///test_db?user=test_user";
+        nativeBuildInputs = [pkgs.mold];
+        nativeCheckInputs = [
+          pkgs.postgresql
+          pkgs.postgresqlTestHook
+        ];
+        DATABASE_URL = "postgres:///?user=postgres";
+        SQLX_OFFLINE = "true";
         cargoLock = {
           lockFile = ./Cargo.lock;
 
@@ -48,7 +46,7 @@
       };
 
       default = self.packages.${system}.memex-server;
-      }) systems;
+      }) {"x86_64-linux" = "";} ; # extend if I test on other systems
 
     overlays.default = final: prev: {
       inherit (self.packages) memex-server;
