@@ -16,7 +16,9 @@ pub async fn load_auth_token() -> Option<AuthToken> {
     .build()
     .log_error()?;
   let store = tx.object_store("account").log_error()?;
-  store.get("auth_token").serde().log_error()?.await.log_error()?
+  let token = store.get("auth_token").serde().log_error()?.await.log_error()?;
+  tx.commit().await.log_error()?;
+  token
 }
 
 pub async fn save_auth_token(auth_token: AuthToken) -> Option<()> {
@@ -28,6 +30,7 @@ pub async fn save_auth_token(auth_token: AuthToken) -> Option<()> {
     .log_error()?;
   let store = tx.object_store("account").log_error()?;
   store.put(auth_token).with_key("auth_token".to_string()).serde().log_error()?.await.log_error()?;
+  tx.commit().await.log_error()?;
   Some(())
 }
 
