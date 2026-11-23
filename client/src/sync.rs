@@ -50,6 +50,13 @@ pub enum WebsocketBackoff {
 
 static ACTION_Q: LazyLock<Mutex<Option<Sender<ToWorker>>>> = LazyLock::new(|| Mutex::new(None));
 
+impl ServerSync {
+  fn disconnected(&mut self) {
+    self.ws = WebsocketBackoff::Backoff(0);
+    self.tx_c.send(ConnStatus::Disconnected);
+  }
+}
+
 #[wasm_bindgen]
 pub async fn setup_shared(server_ws_url: Option<String>) {
   setup_observability();

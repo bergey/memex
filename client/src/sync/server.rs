@@ -79,9 +79,4 @@ impl super::ServerSync {
       }
     }
   }
-
-  fn disconnected(&mut self) {
-    self.ws = WebsocketBackoff::Backoff(0);
-    self.tx_c.send(ConnStatus::Disconnected);
-  }
 }
