@@ -3,7 +3,7 @@ use crate::prelude::*;
 use memex_shared::message::Message;
 
 use wasm_bindgen::{JsCast, closure::Closure};
-use web_sys::{MessageEvent, WebSocket};
+use web_sys::{MessageEvent, SharedWorkerGlobalScope, WebSocket};
 
 impl super::ServerSync {
   pub async fn connect(&mut self) {
@@ -54,8 +54,7 @@ fn exponential_backoff(min_ms: u32, exponent: u32, max_exponent: u32) -> i32 {
 // https://users.rust-lang.org/t/async-sleep-in-rust-wasm32/78218/4
 pub async fn sleep(delay_ms: i32) {
   let mut cb = |resolve: js_sys::Function, _reject: js_sys::Function| {
-    web_sys::window()
-      .unwrap()
+    SharedWorkerGlobalScope::from((*js_sys::global()).clone())
       .set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, delay_ms)
       .unwrap();
   };

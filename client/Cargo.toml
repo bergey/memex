@@ -47,6 +47,7 @@ features = [
   'MouseEvent',
   'PointerEvent',
   'SharedWorker',
+  'SharedWorkerGlobalScope',
   'Storage',
   'Touch',
   'TouchEvent',
