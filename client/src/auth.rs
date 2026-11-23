@@ -39,7 +39,7 @@ pub async fn signup_and_store(mut tx: BrowserPort<ToWorker>) {
     && let Some(resp) = serde_wasm_bindgen::from_value::<AuthResponse>(resp).log_error()
   {
     save_user_id(resp.user_id);
-    debug!("saved auth token, trying to connect WS");
+    debug!("saved user id, trying to connect WS");
     tx.send(&ToWorker::Authenticate(resp.auth_token))
   }
 }
