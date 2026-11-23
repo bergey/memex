@@ -24,9 +24,15 @@ impl super::ServerSync {
               while ws.ready_state() == 0 {
                 sleep(30).await;
               }
-              if let super::server::Outcome::Success = self.try_send(&memex_shared::Message::Authorize(auth_token)) {
-                self.ws = WebsocketBackoff::Connected(ws.clone());
-                self.tx_c.send(ConnStatus::Connected);
+              match ws.send_with_u8_array(&memex_shared::Message::Authorize(auth_token).encode()) {
+                Err(e) => {
+                  debug!(?e, "WS error for Authorize");
+                  self.disconnected();
+                }
+                Ok(_) => {
+                  self.ws = WebsocketBackoff::Connected(ws.clone());
+                  self.tx_c.send(ConnStatus::Connected);
+                }
               }
             }
             Err(err) => {
