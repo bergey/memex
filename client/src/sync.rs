@@ -4,8 +4,8 @@ mod server;
 use crate::prelude::*;
 use memex_shared::AuthToken;
 use memex_shared::{
+  ToClient, ToServer,
   library::{self, Library},
-  message::Message,
 };
 
 use automerge::sync::SyncDoc;
@@ -29,7 +29,7 @@ pub enum ToWorker {
 pub enum ToTabs {
   Library(library::Event),
   Server(ConnStatus),
-  NotAuthorized
+  NotAuthorized,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
@@ -42,7 +42,7 @@ pub enum ConnStatus {
 pub struct ServerSync {
   url: String,
   ws: WebsocketBackoff,
-  tx: Sender<Message>,
+  tx: Sender<ToClient>,
   tx_c: Sender<ConnStatus>,
 }
 
@@ -113,13 +113,13 @@ fn action_callback() -> Closure<dyn FnMut(web_sys::MessageEvent)> {
 async fn shared_worker_thread(
   mut library: Library,
   mut rx_t: Receiver<ToWorker>,
-  mut rx_down: Receiver<Message>,
+  mut rx_down: Receiver<ToClient>,
   mut rx_c: Receiver<ConnStatus>,
-  mut tx_up: Sender<Message>,
+  mut tx_up: Sender<ToServer>,
 ) {
   let mut sync_state = automerge::sync::State::new();
   let mut connected = false;
-  let mut broadcaster = BrowserPort::broadcast("shared_worker");
+  let mut broadcaster = BrowserPort::<ToTabs>::broadcast("shared_worker");
   loop {
     select! {
        r_from_tab = rx_t.recv() => {
@@ -128,33 +128,33 @@ async fn shared_worker_thread(
            let patches = library.apply(&action);
            crate::disk::save_library(&mut library);
            for p in patches {
-               broadcaster.send(&p);
+             broadcaster.send(&ToTabs::Library(p));
            }
            if connected {
                if let Some(message) = library.replicated.sync().generate_sync_message(&mut sync_state) {
-                   tx_up.send(Message::Library(message))
+                   tx_up.send(ToServer::Library(message))
                }
            }
            },
            ToWorker::Authenticate(token) => {
              let outcome = crate::auth::save_auth_token(token).await;
              debug!(?outcome, "saved auth token");
-             tx_up.send(Message::Authorize(token));
+             tx_up.send(ToServer::Authorize(token));
            }
          }
        },
 
         r_down = rx_down.recv() => {
-            use Message::*;
+            use ToClient::*;
             match r_down.context("rx_down").unwrap() {
                 Library(message) => {
                     library.replicated.sync().receive_sync_message(&mut sync_state, message).unwrap();
                     for p in library.get_patches(){
-                        broadcaster.send(&p);
+                      broadcaster.send(&ToTabs::Library(p));
                     }
                     let our_heads = library.replicated.get_heads();
                     if let Some(message) = library.replicated.sync().generate_sync_message(&mut sync_state) {
-                        tx_up.send(Message::Library(message));
+                        tx_up.send(ToServer::Library(message));
                     } else {
                         debug!( ?sync_state, ?our_heads, "no reply");
                     }
@@ -162,10 +162,6 @@ async fn shared_worker_thread(
 
                 LibraryId(_id) => {// TODO
                     warn!("for now we only support one Library per user");
-                }
-
-                Authorize(_) => {
-                    warn!("should only be sent from client to server")
                 }
             }
         },
@@ -175,7 +171,7 @@ async fn shared_worker_thread(
             match r_c.context("r_c").unwrap() {
                 Connected => {
                     connected = true;
-                    tx_up.send(Message::LibraryId(library.id));
+                    tx_up.send(ToServer::LibraryId(library.id));
                 },
                 Disconnected => connected = false,
             }

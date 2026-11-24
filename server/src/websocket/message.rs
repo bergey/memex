@@ -1,6 +1,6 @@
 use crate::database;
 use crate::metrics;
-use memex_shared::{AuthToken, Library, LibraryId, Message};
+use memex_shared::{AuthToken, Library, LibraryId, ToClient, ToServer};
 use sqlx::PgPool;
 
 use automerge::sync::SyncDoc;
@@ -8,25 +8,25 @@ use automerge::sync::SyncDoc;
 #[derive(Clone, Debug)]
 pub enum Reply {
   None,
-  Library(LibraryId, Message),
+  Library(LibraryId, ToClient),
   NotAuthorized,
 }
 
 pub async fn apply_message_reply(
   database: &PgPool,
   client_state: &mut super::Client,
-  message: Message,
+  message: ToServer,
 ) -> anyhow::Result<Reply> {
   match message {
-    Message::Authorize(token) => {
+    ToServer::Authorize(token) => {
       client_state.auth_token = Some(token);
       Ok(Reply::None)
     }
-    Message::LibraryId(id) => {
+    ToServer::LibraryId(id) => {
       client_state.library_in = Some(id);
       Ok(Reply::None)
     }
-    Message::Library(am_msg) => {
+    ToServer::Library(am_msg) => {
       metrics::AUTOMERGE_MESSAGE_RECEIVED.inc();
       let id = client_state
         .library_in
@@ -44,7 +44,7 @@ pub async fn apply_message_reply(
           let o_reply = document.sync().generate_sync_message(am_state);
           match o_reply {
             None => Ok(Reply::None),
-            Some(msg) => Ok(Reply::Library(id, Message::Library(msg)))
+            Some(msg) => Ok(Reply::Library(id, ToClient::Library(msg))),
           }
         }
       }
@@ -78,7 +78,9 @@ pub mod tests {
   async fn set_library_id(pool: PgPool) {
     let mut client_state = Client::new();
     let l_id = LibraryId(123);
-    let reply = apply_message_reply(&pool, &mut client_state, Message::LibraryId(l_id)).await.unwrap();
+    let reply = apply_message_reply(&pool, &mut client_state, ToServer::LibraryId(l_id))
+      .await
+      .unwrap();
     assert_matches!(reply, Reply::None);
     assert_eq!(client_state.library_in, Some(l_id));
   }

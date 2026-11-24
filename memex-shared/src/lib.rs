@@ -6,4 +6,4 @@ pub mod user;
 
 pub use library::Library;
 pub use library::ids::*;
-pub use message::Message;
+pub use message::{ToClient, ToServer};

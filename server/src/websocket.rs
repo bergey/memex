@@ -3,7 +3,7 @@ mod message;
 use crate::metrics;
 use crate::observability::hist_time_since;
 use crate::prelude::*;
-use memex_shared::{AuthToken, Library, LibraryId, Message};
+use memex_shared::{AuthToken, Library, LibraryId, ToClient, ToServer};
 use message::Reply;
 
 use automerge::sync::SyncDoc;
@@ -92,7 +92,7 @@ async fn sync_crdt_ws(pools: Pools, mut socket: WebSocket) {
                 None => debug!( sync_state = ?client_state, our_heads = ?heads, "not forwarding"),
                 Some(notice) =>
                 {
-                    if try_send_library(&mut socket, Message::Library(notice), doc.id, &mut client_state, "broadcast").await.is_err() {
+                    if try_send_library(&mut socket, ToClient::Library(notice), doc.id, &mut client_state, "broadcast").await.is_err() {
                         break;
                     }
                     info!("forwarding remote edit");
@@ -109,13 +109,13 @@ async fn sync_crdt_ws(pools: Pools, mut socket: WebSocket) {
 // Log errors, return Err so the outer loop can break
 async fn try_send_library(
   socket: &mut WebSocket,
-  message: Message,
+  message: ToClient,
   id: LibraryId,
   client_state: &mut Client,
   context: &str, // TODO some general tracing / event machinery instead of this argument
 ) -> anyhow::Result<()> {
   if Some(id) != client_state.library_out {
-    let id_msg = Message::LibraryId(id);
+    let id_msg = ToClient::LibraryId(id);
     try_send(socket, id_msg, context).await?;
     client_state.library_out = Some(id);
   }
@@ -124,7 +124,7 @@ async fn try_send_library(
 }
 
 // send one WS message.  Log errors, return Err so the outer loop can break
-async fn try_send(socket: &mut WebSocket, message: Message, context: &str) -> anyhow::Result<()> {
+async fn try_send(socket: &mut WebSocket, message: ToClient, context: &str) -> anyhow::Result<()> {
   let ret = socket
     .send(ws::Message::Binary(message.encode().into()))
     .await;
@@ -145,9 +145,9 @@ async fn apply_ws_message_reply(
   message::apply_message_reply(&state.0.postgres, client_state, message).await
 }
 
-fn decode_message(ws_msg: ws::Message) -> anyhow::Result<Message> {
+fn decode_message(ws_msg: ws::Message) -> anyhow::Result<ToServer> {
   match ws_msg {
-    ws::Message::Binary(bytes) => Ok(Message::decode(bytes.as_ref())?),
+    ws::Message::Binary(bytes) => Ok(ToServer::decode(bytes.as_ref())?),
     _ => {
       metrics::GARBAGE_MESSAGE_RECEIVED.inc();
       Err(anyhow::anyhow!("expected binary WS message"))

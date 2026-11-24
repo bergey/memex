@@ -1,6 +1,6 @@
 use super::{ConnStatus, WebsocketBackoff};
 use crate::prelude::*;
-use memex_shared::message::Message;
+use memex_shared::message::ToClient;
 
 use wasm_bindgen::{JsCast, closure::Closure};
 use web_sys::{MessageEvent, SharedWorkerGlobalScope, WebSocket};
@@ -24,7 +24,7 @@ impl super::ServerSync {
               while ws.ready_state() == 0 {
                 sleep(30).await;
               }
-              match ws.send_with_u8_array(&memex_shared::Message::Authorize(auth_token).encode()) {
+              match ws.send_with_u8_array(&memex_shared::ToServer::Authorize(auth_token).encode()) {
                 Err(e) => {
                   debug!(?e, "WS error for Authorize");
                   self.disconnected();
@@ -69,16 +69,16 @@ pub async fn sleep(delay_ms: i32) {
   wasm_bindgen_futures::JsFuture::from(p).await.unwrap();
 }
 
-fn onmessage_callback(mut tx: Sender<Message>) -> Closure<dyn FnMut(MessageEvent)> {
+fn onmessage_callback(mut tx: Sender<ToClient>) -> Closure<dyn FnMut(MessageEvent)> {
   Closure::new(move |ev: MessageEvent| {
     on_message_callback_inner(&mut tx, ev);
   })
 }
 
-fn on_message_callback_inner(tx: &mut Sender<Message>, ev: MessageEvent) -> Option<()> {
+fn on_message_callback_inner(tx: &mut Sender<ToClient>, ev: MessageEvent) -> Option<()> {
   let abuf = ev.data().dyn_into::<js_sys::ArrayBuffer>().log_error()?;
   let vec = js_sys::Uint8Array::new(&abuf).to_vec();
-  let message = Message::decode(vec.as_ref()).log_error()?;
+  let message = ToClient::decode(vec.as_ref()).log_error()?;
   tx.send(message);
   Some(())
 }

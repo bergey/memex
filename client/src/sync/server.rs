@@ -1,7 +1,7 @@
 use super::{ConnStatus, WebsocketBackoff};
 
 use crate::prelude::*;
-use memex_shared::message::Message;
+use memex_shared::{ToClient, ToServer};
 
 use futures::channel::mpsc as channel;
 use wasm_bindgen_futures::spawn_local;
@@ -18,8 +18,8 @@ impl super::ServerSync {
   pub fn start(
     url: String,
   ) -> (
-    Sender<Message>,
-    channel::Receiver<Message>,
+    Sender<ToServer>,
+    channel::Receiver<ToClient>,
     channel::Receiver<ConnStatus>,
   ) {
     let (tx_up, mut rx_up) = Sender::new(3);
@@ -44,8 +44,8 @@ impl super::ServerSync {
     (tx_up, rx_down, rx_c)
   }
 
-  async fn send(&mut self, message: &Message) {
-    if let Message::Authorize(_) = message {
+  async fn send(&mut self, message: &ToServer) {
+    if let ToServer::Authorize(_) = message {
       // attempt to connect if we just got a new auth token
       debug!("connect WS to send Authorize");
       self.connect().await; // does it matter if we're already connected?
@@ -60,7 +60,7 @@ impl super::ServerSync {
   }
 
   // true on success
-  pub(super) fn try_send(&mut self, message: &Message) -> Outcome {
+  pub(super) fn try_send(&mut self, message: &ToServer) -> Outcome {
     match &self.ws {
       WebsocketBackoff::Backoff(_) => {
         return Outcome::Drop;
