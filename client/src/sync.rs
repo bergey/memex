@@ -4,7 +4,7 @@ mod server;
 use crate::prelude::*;
 use memex_shared::AuthToken;
 use memex_shared::{
-  library::{Library, action::Action},
+  library::{self, Library},
   message::Message,
 };
 
@@ -20,15 +20,19 @@ use web_sys::WebSocket;
 /// From browser tab to shared Worker
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum ToWorker {
-  Library(Action),
+  Library(library::Action),
   Authenticate(AuthToken),
 }
 
 /// from shared worker to browser Tabs (broadcast)
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub enum ToTabs {}
+pub enum ToTabs {
+  Library(library::Event),
+  Server(ConnStatus),
+  NotAuthorized
+}
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub enum ConnStatus {
   Connected,
   Disconnected,

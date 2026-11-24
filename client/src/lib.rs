@@ -37,8 +37,13 @@ pub fn start(worker_port: web_sys::MessagePort) -> Result<()> {
 // DOM updates
 fn broadcast_callback(mut reactive: render::ReactiveLibrary) -> Closure<dyn FnMut(web_sys::MessageEvent)> {
   Closure::new(move |ev: web_sys::MessageEvent| {
-    if let Some(event) = serde_wasm_bindgen::from_value(ev.data()).log_error() {
-      reactive.apply(event);
+    if let Some(msg) = serde_wasm_bindgen::from_value(ev.data()).log_error() {
+      use sync::ToTabs::*;
+      match msg {
+        Library(event) => reactive.apply(event),
+        Server(_) => todo!(),
+        NotAuthorized => todo!("login")
+      }
     }
   })
 }

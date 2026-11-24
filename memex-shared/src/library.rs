@@ -6,6 +6,7 @@ pub mod schema;
 
 use crate::errors::LogResult;
 use action::*;
+pub use action::{Action, Event};
 pub use ids::*;
 
 use automerge::{
